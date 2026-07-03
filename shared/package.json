@@ -1,0 +1,20 @@
+{
+  "name": "shared",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@deepgram/sdk": "^3.1.9",
+    "color": "^4.2.3",
+    "elevenlabs": "^0.18.1",
+    "mongoose": "^8.14.3",
+    "openai": "^4.98.0"
+  },
+  "devDependencies": {
+    "@types/color": "^3.0.6",
+    "typescript": "5.5.4"
+  }
+}

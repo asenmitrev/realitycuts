@@ -1,0 +1,34 @@
+node_modules/
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+**/.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# AI agent tooling config (local only, not project artifacts)
+.claude/
+.pi/
+.nwave/
+
+.env
+.env.*
+**/subtitles-octopus-worker.js
+.cloc
+functions/venvs/
+
+**/meta.json
+**/bin
+**/index.js
+.yarn/
+
+**.log
+
+# Log directories
+**/logs/

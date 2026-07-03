@@ -1,0 +1,10 @@
+node_modules/
+in/
+tmp/
+library/
+cache/
+scenedetect_out/
+.env*
+dist/
+data/
+test.ts

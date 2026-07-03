@@ -1,0 +1,13 @@
+node_modules/
+dist/
+dist_server/
+.env
+.env.*
+secrets/
+data/
+ffmpeg.log
+.vertex-key.json
+cache/
+in/
+bin/
+tmp/

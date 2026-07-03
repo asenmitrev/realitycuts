@@ -1,0 +1,113 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio-data:/data
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+        mc alias set local http://minio:9000 ${MINIO_ACCESS_KEY:-minioadmin} ${MINIO_SECRET_KEY:-minioadmin} &&
+        mc mb --ignore-existing local/1703-media-app-2 &&
+        mc anonymous set public local/1703-media-app-2 &&
+        exit 0
+      "
+
+  mongo:
+    # mongodb-atlas-local bundles mongod + mongot (MongoDB Search) as a
+    # single-node replica set; it replaces plain mongo:7 since search can't
+    # be bolted on as a second container without converting mongo:7 to a
+    # replica set with keyfile auth for a separate mongot to attach to.
+    image: mongodb/mongodb-atlas-local:7.0.34
+    hostname: mongo
+    volumes:
+      - videoai-mongo:/data/db
+      - videoai-mongo-configdb:/data/configdb
+      - videoai-mongo-search:/data/mongot
+    environment:
+      MONGODB_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:-admin}
+      MONGODB_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-adminpassword}
+    ports:
+      - "27017:27017"
+    # Image ships its own HEALTHCHECK covering mongod + mongot readiness;
+    # do not override it here.
+
+  server:
+    build:
+      context: .
+      dockerfile: app/server/Dockerfile
+    ports:
+      - "3010:3010"
+    # Real API keys live in app/server/.env; explicit `environment` entries
+    # below override anything from this file (hosts/URLs for the compose network).
+    env_file:
+      - app/server/.env
+    volumes:
+      - ./app/server/.vertex-key.json:/app/.vertex-key.json:ro
+    environment:
+      - ENVIRONMENT=local
+      - PORT=3010
+      - MONGODB_URI=${MONGODB_URI:-mongodb://${MONGO_ROOT_USERNAME:-admin}:${MONGO_ROOT_PASSWORD:-adminpassword}@mongo:27017/videoai?authSource=admin&directConnection=true}
+      - REDIS_HOST=redis
+      - MINIO_ENDPOINT=http://minio:9000
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
+      - MINIO_BUCKET=1703-media-app-2
+      - MEDIA_BASE_URL=http://localhost:9000
+      - CLIENT_URL=http://localhost:3011
+      - API_URL=http://localhost:3010
+    depends_on:
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+      mongo:
+        condition: service_healthy
+
+  client:
+    build:
+      context: .
+      dockerfile: app/client/Dockerfile
+    ports:
+      - "3011:3011"
+    depends_on:
+      - server
+
+volumes:
+  redis-data:
+  minio-data:
+  videoai-mongo:
+  videoai-mongo-configdb:
+  videoai-mongo-search:

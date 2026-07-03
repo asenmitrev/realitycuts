@@ -1,0 +1,1721 @@
+[
+  {
+    "bounds": [
+      2,
+      3.36
+    ],
+    "alternative": {
+      "title": "The video captures the liberation of Paris, focusing on the joyous celebration of the French people. The scene is set outdoors in a crowded square, with a diverse group of people, including women and children, gathered to commemorate the event. The crowd is dressed in colorful, casual attire, reflecting the festive atmosphere. The setting appears to be in a city, with buildings and a clear sky in the background, suggesting a sunny day. The time of day is likely afternoon, given the brightness and shadows. The expressions on the faces of the people are jubilant, with smiles and laughter, indicating a sense of relief and happiness. The overall mood is one of unity and triumph, as the people come together to celebrate the liberation of their city.",
+      "duration": 3.36,
+      "thumbnailUrl": "https://d30vrxhapfwqn8.cloudfront.net//users/cSRkiM5IRUf1ceemvXRPVp399MJ3/library/679a3225251ada350706b37b/1741597780532-712c5-thumbnail.png",
+      "link": "https://d30vrxhapfwqn8.cloudfront.net//users/cSRkiM5IRUf1ceemvXRPVp399MJ3/library/679a3225251ada350706b37b/1741597780532-4e524.mp4",
+      "score": 0.6013168096542358,
+      "isVisible": true,
+      "leftPosition": 1,
+      "topPosition": 1,
+      "offsetStart": 0,
+      "isVertical": false,
+      "faceDetectionResults": {
+        "frame05s": {
+          "faceCount": 24,
+          "faces": [
+            {
+              "x": 1026,
+              "y": 64,
+              "width": 110,
+              "height": 141,
+              "confidence": 0.941
+            },
+            {
+              "x": 1302,
+              "y": 653,
+              "width": 177,
+              "height": 230,
+              "confidence": 0.922
+            },
+            {
+              "x": 548,
+              "y": 643,
+              "width": 165,
+              "height": 207,
+              "confidence": 0.92
+            },
+            {
+              "x": 319,
+              "y": 517,
+              "width": 158,
+              "height": 194,
+              "confidence": 0.919
+            },
+            {
+              "x": 1482,
+              "y": 632,
+              "width": 86,
+              "height": 114,
+              "confidence": 0.908
+            },
+            {
+              "x": 1380,
+              "y": 449,
+              "width": 85,
+              "height": 105,
+              "confidence": 0.906
+            },
+            {
+              "x": 1553,
+              "y": 494,
+              "width": 79,
+              "height": 86,
+              "confidence": 0.889
+            },
+            {
+              "x": 1526,
+              "y": 237,
+              "width": 41,
+              "height": 56,
+              "confidence": 0.885
+            },
+            {
+              "x": 1568,
+              "y": 157,
+              "width": 40,
+              "height": 50,
+              "confidence": 0.872
+            },
+            {
+              "x": 1009,
+              "y": 560,
+              "width": 119,
+              "height": 148,
+              "confidence": 0.871
+            },
+            {
+              "x": 1402,
+              "y": 199,
+              "width": 41,
+              "height": 53,
+              "confidence": 0.85
+            },
+            {
+              "x": 1625,
+              "y": 307,
+              "width": 47,
+              "height": 66,
+              "confidence": 0.813
+            },
+            {
+              "x": 1484,
+              "y": 97,
+              "width": 27,
+              "height": 33,
+              "confidence": 0.804
+            },
+            {
+              "x": 743,
+              "y": 416,
+              "width": 122,
+              "height": 144,
+              "confidence": 0.78
+            },
+            {
+              "x": 1392,
+              "y": 88,
+              "width": 27,
+              "height": 28,
+              "confidence": 0.748
+            },
+            {
+              "x": 1336,
+              "y": 398,
+              "width": 71,
+              "height": 99,
+              "confidence": 0.704
+            },
+            {
+              "x": 1264,
+              "y": 67,
+              "width": 24,
+              "height": 29,
+              "confidence": 0.681
+            },
+            {
+              "x": 696,
+              "y": 19,
+              "width": 20,
+              "height": 24,
+              "confidence": 0.669
+            },
+            {
+              "x": 1445,
+              "y": 90,
+              "width": 22,
+              "height": 26,
+              "confidence": 0.642
+            },
+            {
+              "x": 322,
+              "y": 70,
+              "width": 27,
+              "height": 32,
+              "confidence": 0.641
+            },
+            {
+              "x": 670,
+              "y": 14,
+              "width": 16,
+              "height": 21,
+              "confidence": 0.635
+            },
+            {
+              "x": 1611,
+              "y": 159,
+              "width": 36,
+              "height": 51,
+              "confidence": 0.63
+            },
+            {
+              "x": 1537,
+              "y": 37,
+              "width": 27,
+              "height": 31,
+              "confidence": 0.624
+            },
+            {
+              "x": 1565,
+              "y": 392,
+              "width": 56,
+              "height": 66,
+              "confidence": 0.61
+            }
+          ],
+          "successful_strategy": "yunet_standard",
+          "image_analysis": {
+            "brightness": 55,
+            "contrast": 46.8,
+            "noise_level": 57,
+            "is_low_quality": true,
+            "preprocessing_applied": [
+              "brighten",
+              "denoise",
+              "sharpen",
+              "downscale"
+            ]
+          },
+          "detection_stats": {
+            "total_attempts": 1,
+            "successful_detections": 1,
+            "strategy_usage": {
+              "yunet_standard": 1,
+              "yunet_enhanced": 0,
+              "yunet_multiscale": 0,
+              "yunet_rotation": 0,
+              "fallback_cascade": 0
+            }
+          }
+        },
+        "frame25s": {
+          "faceCount": 19,
+          "faces": [
+            {
+              "x": 1524,
+              "y": 603,
+              "width": 154,
+              "height": 226,
+              "confidence": 0.928
+            },
+            {
+              "x": 630,
+              "y": 725,
+              "width": 168,
+              "height": 212,
+              "confidence": 0.925
+            },
+            {
+              "x": 1488,
+              "y": 443,
+              "width": 85,
+              "height": 109,
+              "confidence": 0.899
+            },
+            {
+              "x": 1320,
+              "y": 340,
+              "width": 183,
+              "height": 221,
+              "confidence": 0.884
+            },
+            {
+              "x": 785,
+              "y": 392,
+              "width": 122,
+              "height": 173,
+              "confidence": 0.883
+            },
+            {
+              "x": 1459,
+              "y": 150,
+              "width": 37,
+              "height": 41,
+              "confidence": 0.875
+            },
+            {
+              "x": 1611,
+              "y": 505,
+              "width": 73,
+              "height": 88,
+              "confidence": 0.874
+            },
+            {
+              "x": 1540,
+              "y": 156,
+              "width": 39,
+              "height": 47,
+              "confidence": 0.872
+            },
+            {
+              "x": 1133,
+              "y": 107,
+              "width": 97,
+              "height": 131,
+              "confidence": 0.841
+            },
+            {
+              "x": 1416,
+              "y": 47,
+              "width": 26,
+              "height": 31,
+              "confidence": 0.805
+            },
+            {
+              "x": 1032,
+              "y": 383,
+              "width": 61,
+              "height": 75,
+              "confidence": 0.802
+            },
+            {
+              "x": 793,
+              "y": 18,
+              "width": 21,
+              "height": 25,
+              "confidence": 0.786
+            },
+            {
+              "x": 1448,
+              "y": 78,
+              "width": 28,
+              "height": 31,
+              "confidence": 0.764
+            },
+            {
+              "x": 766,
+              "y": 18,
+              "width": 16,
+              "height": 21,
+              "confidence": 0.743
+            },
+            {
+              "x": 944,
+              "y": 20,
+              "width": 17,
+              "height": 21,
+              "confidence": 0.738
+            },
+            {
+              "x": 1469,
+              "y": 26,
+              "width": 26,
+              "height": 35,
+              "confidence": 0.732
+            },
+            {
+              "x": 1340,
+              "y": 69,
+              "width": 29,
+              "height": 36,
+              "confidence": 0.715
+            },
+            {
+              "x": 598,
+              "y": 165,
+              "width": 118,
+              "height": 161,
+              "confidence": 0.684
+            },
+            {
+              "x": 1310,
+              "y": 47,
+              "width": 27,
+              "height": 32,
+              "confidence": 0.603
+            }
+          ],
+          "successful_strategy": "yunet_standard",
+          "image_analysis": {
+            "brightness": 47.7,
+            "contrast": 41.3,
+            "noise_level": 46.7,
+            "is_low_quality": true,
+            "preprocessing_applied": [
+              "brighten",
+              "denoise",
+              "sharpen",
+              "downscale"
+            ]
+          },
+          "detection_stats": {
+            "total_attempts": 2,
+            "successful_detections": 2,
+            "strategy_usage": {
+              "yunet_standard": 2,
+              "yunet_enhanced": 0,
+              "yunet_multiscale": 0,
+              "yunet_rotation": 0,
+              "fallback_cascade": 0
+            }
+          }
+        },
+        "model": "Adaptive YuNet + Cascades",
+        "total_faces_detected": 43,
+        "video_dimensions": {
+          "width": 1920,
+          "height": 1080,
+          "aspect_ratio": 1.778,
+          "orientation": "landscape"
+        }
+      },
+      "videoDimensions": {
+        "width": 1920,
+        "height": 1080,
+        "aspect_ratio": 1.778,
+        "orientation": "landscape"
+      },
+      "perceptualHash": "1000010011010000010010000100101011101010110001001100001100101101",
+      "id": -1,
+      "dbId": "67ceac70e1eea999abb0dc59",
+      "type": "pinecone",
+      "preview": "https://d30vrxhapfwqn8.cloudfront.net//users/undefined/library/679a3225251ada350706b37b/1748534622530-bSMwJW1IOb0uNId-9V5GL-preview.mp4",
+      "chosenByScriptwriter": true
+    }
+  },
+  {
+    "bounds": [
+      3.5,
+      4.5
+    ],
+    "alternative": {
+      "title": "The video captures a historical moment from World War II, specifically the liberation of Norway in 1945. The scene is set in the streets of Oslo, with a large crowd of people gathered to celebrate the victory. The footage is in black and white, suggesting it is archival. The crowd is diverse, with individuals of various ages and attire, including uniforms and traditional clothing. The setting is outdoors, with buildings lining the street and a clear sky overhead. The time of day appears to be daytime, possibly late morning or early afternoon. The facial expressions of the people are not clearly visible, but the overall atmosphere is one of joy and celebration. The video provides a rare glimpse into the victory celebrations that took place in Norway following the significant event of the Norwegian and British officials receiving the German surrender.",
+      "duration": 5.772433,
+      "thumbnailUrl": "https://d30vrxhapfwqn8.cloudfront.net//users/cSRkiM5IRUf1ceemvXRPVp399MJ3/library/679a3225251ada350706b37b/1741865811396-8cbb7-thumbnail.png",
+      "link": "https://d30vrxhapfwqn8.cloudfront.net//users/cSRkiM5IRUf1ceemvXRPVp399MJ3/library/679a3225251ada350706b37b/1741865811396-c06d6.mp4",
+      "score": 0.6108229160308838,
+      "isVisible": true,
+      "leftPosition": 1.85625,
+      "topPosition": 1,
+      "offsetStart": 0,
+      "isVertical": false,
+      "framing": "WS",
+      "depthOfField": "DF",
+      "perspective": "OP",
+      "cameraAngle": "EYEL",
+      "faceDetectionResults": {
+        "frame05s": {
+          "faceCount": 4,
+          "faces": [
+            {
+              "x": 422,
+              "y": 203,
+              "width": 37,
+              "height": 49,
+              "confidence": 0.904
+            },
+            {
+              "x": 564,
+              "y": 278,
+              "width": 60,
+              "height": 75,
+              "confidence": 0.902
+            },
+            {
+              "x": 440,
+              "y": 269,
+              "width": 41,
+              "height": 52,
+              "confidence": 0.869
+            },
+            {
+              "x": 525,
+              "y": 250,
+              "width": 40,
+              "height": 51,
+              "confidence": 0.762
+            }
+          ],
+          "successful_strategy": "yunet_standard",
+          "image_analysis": {
+            "brightness": 100.8,
+            "contrast": 58.2,
+            "noise_level": 189.6,
+            "is_low_quality": false,
+            "preprocessing_applied": [
+              "denoise"
+            ]
+          },
+          "detection_stats": {
+            "total_attempts": 1,
+            "successful_detections": 1,
+            "strategy_usage": {
+              "yunet_standard": 1,
+              "yunet_enhanced": 0,
+              "yunet_multiscale": 0,
+              "yunet_rotation": 0,
+              "fallback_cascade": 0
+            }
+          }
+        },
+        "frame25s": {
+          "faceCount": 4,
+          "faces": [
+            {
+              "x": 521,
+              "y": 192,
+              "width": 30,
+              "height": 39,
+              "confidence": 0.881
+            },
+            {
+              "x": 610,
+              "y": 249,
+              "width": 29,
+              "height": 40,
+              "confidence": 0.807
+            },
+            {
+              "x": 559,
+              "y": 255,
+              "width": 36,
+              "height": 47,
+              "confidence": 0.806
+            },
+            {
+              "x": 442,
+              "y": 270,
+              "width": 46,
+              "height": 58,
+              "confidence": 0.606
+            }
+          ],
+          "successful_strategy": "yunet_standard",
+          "image_analysis": {
+            "brightness": 99.5,
+            "contrast": 60,
+            "noise_level": 191.1,
+            "is_low_quality": false,
+            "preprocessing_applied": [
+              "denoise"
+            ]
+          },
+          "detection_stats": {
+            "total_attempts": 2,
+            "successful_detections": 2,
+            "strategy_usage": {
+              "yunet_standard": 2,
+              "yunet_enhanced": 0,
+              "yunet_multiscale": 0,
+              "yunet_rotation": 0,
+              "fallback_cascade": 0
+            }
+          }
+        },
+        "model": "Adaptive YuNet + Cascades",
+        "total_faces_detected": 8,
+        "video_dimensions": {
+          "width": 640,
+          "height": 480,
+          "aspect_ratio": 1.333,
+          "orientation": "landscape"
+        }
+      },
+      "videoDimensions": {
+        "width": 640,
+        "height": 480,
+        "aspect_ratio": 1.333,
+        "orientation": "landscape"
+      },
+      "perceptualHash": "1001011001001000001011000000011101010100110011100011000101111110",
+      "id": -1,
+      "dbId": "67d2c3cf315c398c699a2b4e",
+      "type": "pinecone",
+      "preview": "https://d30vrxhapfwqn8.cloudfront.net//users/undefined/library/679a3225251ada350706b37b/1748534810619-tRu4sNo73UIeuF-yCaDyg-preview.mp4",
+      "chosenByScriptwriter": true
+    }
+  },
+  {
+    "bounds": [
+      3.5,
+      4.5
+    ],
+    "alternative": {
+      "title": "The video captures a historical moment from World War II, specifically the liberation of Norway in 1945. The footage is archival and in black and white, providing a glimpse into the victory celebrations that took place in the streets of Norway following the surrender of German forces. The setting is outdoors, with a large crowd of people gathered, likely Norwegian and British officials, as they receive the German surrender. The time of day is not specified, but the lighting suggests it could be daytime. The crowd is diverse, with people of various ages and genders, all appearing to be celebrating and cheering. The facial expressions of the crowd are not visible, but the overall atmosphere is one of joy and triumph. The clothing is not clearly visible, but it is likely to be formal or semi-formal, given the nature of the event. The video is a valuable historical resource, offering a rare and authentic look at a significant moment in World War II.",
+      "duration": 5.472133,
+      "thumbnailUrl": "https://d30vrxhapfwqn8.cloudfront.net//users/cSRkiM5IRUf1ceemvXRPVp399MJ3/library/679a3225251ada350706b37b/1741865811401-0f37a-thumbnail.png",
+      "link": "https://d30vrxhapfwqn8.cloudfront.net//users/cSRkiM5IRUf1ceemvXRPVp399MJ3/library/679a3225251ada350706b37b/1741865811401-75969.mp4",
+      "score": 0.6004202365875244,
+      "isVisible": true,
+      "leftPosition": 1,
+      "topPosition": 1,
+      "offsetStart": 0,
+      "isVertical": false,
+      "framing": "LS",
+      "depthOfField": "DF",
+      "perspective": "OP",
+      "cameraAngle": "HA",
+      "faceDetectionResults": {
+        "frame05s": {
+          "faceCount": 15,
+          "faces": [
+            {
+              "x": 236,
+              "y": 95,
+              "width": 20,
+              "height": 24,
+              "confidence": 0.822
+            },
+            {
+              "x": 337,
+              "y": 61,
+              "width": 20,
+              "height": 27,
+              "confidence": 0.819
+            },
+            {
+              "x": 295,
+              "y": 94,
+              "width": 19,
+              "height": 24,
+              "confidence": 0.791
+            },
+            {
+              "x": 115,
+              "y": 159,
+              "width": 19,
+              "height": 25,
+              "confidence": 0.784
+            },
+            {
+              "x": 111,
+              "y": 89,
+              "width": 20,
+              "height": 25,
+              "confidence": 0.782
+            },
+            {
+              "x": 223,
+              "y": 28,
+              "width": 18,
+              "height": 24,
+              "confidence": 0.778
+            },
+            {
+              "x": 175,
+              "y": 40,
+              "width": 18,
+              "height": 22,
+              "confidence": 0.767
+            },
+            {
+              "x": 374,
+              "y": 121,
+              "width": 21,
+              "height": 28,
+              "confidence": 0.766
+            },
+            {
+              "x": 125,
+              "y": 25,
+              "width": 18,
+              "height": 23,
+              "confidence": 0.761
+            },
+            {
+              "x": 42,
+              "y": 27,
+              "width": 14,
+              "height": 17,
+              "confidence": 0.745
+            },
+            {
+              "x": 257,
+              "y": 39,
+              "width": 21,
+              "height": 25,
+              "confidence": 0.729
+            },
+            {
+              "x": 213,
+              "y": 66,
+              "width": 19,
+              "height": 26,
+              "confidence": 0.699
+            },
+            {
+              "x": 150,
+              "y": 108,
+              "width": 19,
+              "height": 25,
+              "confidence": 0.687
+            },
+            {
+              "x": 93,
+              "y": 101,
+              "width": 18,
+              "height": 22,
+              "confidence": 0.667
+            },
+            {
+              "x": 15,
+              "y": 169,
+              "width": 22,
+              "height": 28,
+              "confidence": 0.641
+            }
+          ],
+          "successful_strategy": "yunet_standard",
+          "image_analysis": {
+            "brightness": 97.1,
+            "contrast": 69.8,
+            "noise_level": 192,
+            "is_low_quality": false,
+            "preprocessing_applied": [
+              "denoise"
+            ]
+          },
+          "detection_stats": {
+            "total_attempts": 1,
+            "successful_detections": 1,
+            "strategy_usage": {
+              "yunet_standard": 1,
+              "yunet_enhanced": 0,
+              "yunet_multiscale": 0,
+              "yunet_rotation": 0,
+              "fallback_cascade": 0
+            }
+          }
+        },
+        "frame25s": {
+          "faceCount": 48,
+          "faces": [
+            {
+              "x": 384,
+              "y": 274,
+              "width": 20,
+              "height": 26,
+              "confidence": 0.866
+            },
+            {
+              "x": 261,
+              "y": 344,
+              "width": 19,
+              "height": 24,
+              "confidence": 0.853
+            },
+            {
+              "x": 176,
+              "y": 285,
+              "width": 19,
+              "height": 24,
+              "confidence": 0.851
+            },
+            {
+              "x": 608,
+              "y": 169,
+              "width": 18,
+              "height": 23,
+              "confidence": 0.851
+            },
+            {
+              "x": 71,
+              "y": 351,
+              "width": 24,
+              "height": 30,
+              "confidence": 0.849
+            },
+            {
+              "x": 117,
+              "y": 365,
+              "width": 22,
+              "height": 29,
+              "confidence": 0.845
+            },
+            {
+              "x": 241,
+              "y": 230,
+              "width": 17,
+              "height": 22,
+              "confidence": 0.842
+            },
+            {
+              "x": 200,
+              "y": 232,
+              "width": 19,
+              "height": 25,
+              "confidence": 0.834
+            },
+            {
+              "x": 156,
+              "y": 338,
+              "width": 20,
+              "height": 25,
+              "confidence": 0.828
+            },
+            {
+              "x": 292,
+              "y": 211,
+              "width": 19,
+              "height": 23,
+              "confidence": 0.826
+            },
+            {
+              "x": 183,
+              "y": 329,
+              "width": 19,
+              "height": 24,
+              "confidence": 0.822
+            },
+            {
+              "x": 483,
+              "y": 211,
+              "width": 20,
+              "height": 25,
+              "confidence": 0.806
+            },
+            {
+              "x": 270,
+              "y": 148,
+              "width": 17,
+              "height": 22,
+              "confidence": 0.801
+            },
+            {
+              "x": 233,
+              "y": 323,
+              "width": 19,
+              "height": 25,
+              "confidence": 0.798
+            },
+            {
+              "x": 192,
+              "y": 102,
+              "width": 18,
+              "height": 23,
+              "confidence": 0.798
+            },
+            {
+              "x": 376,
+              "y": 205,
+              "width": 16,
+              "height": 22,
+              "confidence": 0.798
+            },
+            {
+              "x": 302,
+              "y": 248,
+              "width": 20,
+              "height": 24,
+              "confidence": 0.791
+            },
+            {
+              "x": 294,
+              "y": 319,
+              "width": 17,
+              "height": 24,
+              "confidence": 0.779
+            },
+            {
+              "x": 58,
+              "y": 215,
+              "width": 18,
+              "height": 24,
+              "confidence": 0.776
+            },
+            {
+              "x": 419,
+              "y": 183,
+              "width": 19,
+              "height": 23,
+              "confidence": 0.764
+            },
+            {
+              "x": 21,
+              "y": 268,
+              "width": 22,
+              "height": 31,
+              "confidence": 0.755
+            },
+            {
+              "x": 168,
+              "y": 105,
+              "width": 16,
+              "height": 21,
+              "confidence": 0.752
+            },
+            {
+              "x": 322,
+              "y": 334,
+              "width": 19,
+              "height": 25,
+              "confidence": 0.75
+            },
+            {
+              "x": 63,
+              "y": 110,
+              "width": 18,
+              "height": 23,
+              "confidence": 0.746
+            },
+            {
+              "x": 205,
+              "y": 81,
+              "width": 19,
+              "height": 24,
+              "confidence": 0.742
+            },
+            {
+              "x": 116,
+              "y": 139,
+              "width": 19,
+              "height": 25,
+              "confidence": 0.736
+            },
+            {
+              "x": 431,
+              "y": 311,
+              "width": 20,
+              "height": 27,
+              "confidence": 0.728
+            },
+            {
+              "x": 325,
+              "y": 270,
+              "width": 19,
+              "height": 25,
+              "confidence": 0.705
+            },
+            {
+              "x": 448,
+              "y": 125,
+              "width": 16,
+              "height": 21,
+              "confidence": 0.689
+            },
+            {
+              "x": 444,
+              "y": 179,
+              "width": 15,
+              "height": 19,
+              "confidence": 0.685
+            },
+            {
+              "x": 367,
+              "y": 232,
+              "width": 18,
+              "height": 22,
+              "confidence": 0.678
+            },
+            {
+              "x": 86,
+              "y": 275,
+              "width": 20,
+              "height": 26,
+              "confidence": 0.674
+            },
+            {
+              "x": 239,
+              "y": 188,
+              "width": 18,
+              "height": 22,
+              "confidence": 0.668
+            },
+            {
+              "x": 427,
+              "y": 135,
+              "width": 15,
+              "height": 20,
+              "confidence": 0.653
+            },
+            {
+              "x": 356,
+              "y": 110,
+              "width": 15,
+              "height": 21,
+              "confidence": 0.65
+            },
+            {
+              "x": 84,
+              "y": 106,
+              "width": 19,
+              "height": 24,
+              "confidence": 0.64
+            },
+            {
+              "x": 225,
+              "y": 253,
+              "width": 18,
+              "height": 24,
+              "confidence": 0.639
+            },
+            {
+              "x": 421,
+              "y": 91,
+              "width": 18,
+              "height": 22,
+              "confidence": 0.632
+            },
+            {
+              "x": 414,
+              "y": 59,
+              "width": 16,
+              "height": 21,
+              "confidence": 0.626
+            },
+            {
+              "x": 107,
+              "y": 74,
+              "width": 18,
+              "height": 22,
+              "confidence": 0.626
+            },
+            {
+              "x": 606,
+              "y": 237,
+              "width": 18,
+              "height": 23,
+              "confidence": 0.626
+            },
+            {
+              "x": 40,
+              "y": 132,
+              "width": 15,
+              "height": 20,
+              "confidence": 0.62
+            },
+            {
+              "x": 501,
+              "y": 39,
+              "width": 17,
+              "height": 21,
+              "confidence": 0.614
+            },
+            {
+              "x": 204,
+              "y": 160,
+              "width": 18,
+              "height": 22,
+              "confidence": 0.612
+            },
+            {
+              "x": 215,
+              "y": 285,
+              "width": 17,
+              "height": 22,
+              "confidence": 0.611
+            },
+            {
+              "x": 471,
+              "y": 149,
+              "width": 15,
+              "height": 19,
+              "confidence": 0.606
+            },
+            {
+              "x": 160,
+              "y": 141,
+              "width": 19,
+              "height": 24,
+              "confidence": 0.605
+            },
+            {
+              "x": 558,
+              "y": 20,
+              "width": 16,
+              "height": 20,
+              "confidence": 0.605
+            }
+          ],
+          "successful_strategy": "yunet_standard",
+          "image_analysis": {
+            "brightness": 100.1,
+            "contrast": 58.5,
+            "noise_level": 433.8,
+            "is_low_quality": false,
+            "preprocessing_applied": [
+              "denoise"
+            ]
+          },
+          "detection_stats": {
+            "total_attempts": 2,
+            "successful_detections": 2,
+            "strategy_usage": {
+              "yunet_standard": 2,
+              "yunet_enhanced": 0,
+              "yunet_multiscale": 0,
+              "yunet_rotation": 0,
+              "fallback_cascade": 0
+            }
+          }
+        },
+        "model": "Adaptive YuNet + Cascades",
+        "total_faces_detected": 63,
+        "video_dimensions": {
+          "width": 640,
+          "height": 480,
+          "aspect_ratio": 1.333,
+          "orientation": "landscape"
+        }
+      },
+      "videoDimensions": {
+        "width": 640,
+        "height": 480,
+        "aspect_ratio": 1.333,
+        "orientation": "landscape"
+      },
+      "perceptualHash": "1100000101111110110100101000011100101111100010011001001110010010",
+      "id": -1,
+      "dbId": "67d2c43ad6ee0759d41c201e",
+      "type": "pinecone",
+      "preview": "https://d30vrxhapfwqn8.cloudfront.net//users/undefined/library/679a3225251ada350706b37b/1748534791541-fTGlh_Uz0BKKbKbCWdlT1-preview.mp4",
+      "chosenByScriptwriter": true
+    }
+  },
+  {
+    "bounds": [
+      3.5,
+      4.5
+    ],
+    "alternative": {
+      "title": "In this colorized historical footage from World War II, a large community gathering is taking place outdoors, likely commemorating the end of the war in Europe. The scene depicts a diverse crowd of women, children, and elderly individuals seated at long tables in an urban setting with industrial infrastructure visible in the background. Participants are wearing modest, mid-20th century clothing in muted tones of beige, navy, and light colors, representing typical post-war civilian attire. The atmosphere appears to be a communal meal or celebration, with people sitting closely together, suggesting a sense of solidarity and shared experience during this pivotal moment in history. The daylight and outdoor setting indicate this is likely an afternoon event, capturing the collective relief and camaraderie of people coming together after the tremendous hardships of World War II.",
+      "duration": 6.68,
+      "thumbnailUrl": "https://d30vrxhapfwqn8.cloudfront.net//users/cSRkiM5IRUf1ceemvXRPVp399MJ3/library/679a3225251ada350706b37b/1744456666259-5877d-thumbnail.png",
+      "link": "https://d30vrxhapfwqn8.cloudfront.net//users/cSRkiM5IRUf1ceemvXRPVp399MJ3/library/679a3225251ada350706b37b/1744456666259-1e8ce.mp4",
+      "score": 0.5968572497367859,
+      "isVisible": true,
+      "leftPosition": 1,
+      "topPosition": 1,
+      "offsetStart": 0,
+      "isVertical": false,
+      "complexity": "MODERATE",
+      "framing": "LS",
+      "depthOfField": "DF",
+      "perspective": "OP",
+      "cameraAngle": "EYEL",
+      "arollBroll": "BROLL",
+      "faceDetectionResults": {
+        "frame05s": {
+          "faceCount": 16,
+          "faces": [
+            {
+              "x": 1154,
+              "y": 377,
+              "width": 81,
+              "height": 106,
+              "confidence": 0.909
+            },
+            {
+              "x": 603,
+              "y": 614,
+              "width": 56,
+              "height": 73,
+              "confidence": 0.9
+            },
+            {
+              "x": 1083,
+              "y": 377,
+              "width": 69,
+              "height": 88,
+              "confidence": 0.885
+            },
+            {
+              "x": 994,
+              "y": 387,
+              "width": 44,
+              "height": 56,
+              "confidence": 0.848
+            },
+            {
+              "x": 389,
+              "y": 370,
+              "width": 62,
+              "height": 75,
+              "confidence": 0.839
+            },
+            {
+              "x": 537,
+              "y": 372,
+              "width": 39,
+              "height": 47,
+              "confidence": 0.834
+            },
+            {
+              "x": 849,
+              "y": 419,
+              "width": 19,
+              "height": 24,
+              "confidence": 0.798
+            },
+            {
+              "x": 923,
+              "y": 405,
+              "width": 21,
+              "height": 26,
+              "confidence": 0.798
+            },
+            {
+              "x": 1130,
+              "y": 703,
+              "width": 69,
+              "height": 78,
+              "confidence": 0.781
+            },
+            {
+              "x": 546,
+              "y": 424,
+              "width": 36,
+              "height": 47,
+              "confidence": 0.767
+            },
+            {
+              "x": 1044,
+              "y": 925,
+              "width": 81,
+              "height": 110,
+              "confidence": 0.748
+            },
+            {
+              "x": 815,
+              "y": 422,
+              "width": 20,
+              "height": 25,
+              "confidence": 0.705
+            },
+            {
+              "x": 1310,
+              "y": 391,
+              "width": 71,
+              "height": 76,
+              "confidence": 0.649
+            },
+            {
+              "x": 1167,
+              "y": 326,
+              "width": 68,
+              "height": 78,
+              "confidence": 0.638
+            },
+            {
+              "x": 554,
+              "y": 591,
+              "width": 42,
+              "height": 55,
+              "confidence": 0.631
+            },
+            {
+              "x": 56,
+              "y": 350,
+              "width": 134,
+              "height": 160,
+              "confidence": 0.618
+            }
+          ],
+          "successful_strategy": "yunet_standard",
+          "image_analysis": {
+            "brightness": 107.3,
+            "contrast": 51.7,
+            "noise_level": 21.9,
+            "is_low_quality": true,
+            "preprocessing_applied": [
+              "denoise",
+              "sharpen"
+            ]
+          },
+          "detection_stats": {
+            "total_attempts": 1,
+            "successful_detections": 1,
+            "strategy_usage": {
+              "yunet_standard": 1,
+              "yunet_enhanced": 0,
+              "yunet_multiscale": 0,
+              "yunet_rotation": 0,
+              "fallback_cascade": 0
+            }
+          }
+        },
+        "frame25s": {
+          "faceCount": 14,
+          "faces": [
+            {
+              "x": 242,
+              "y": 597,
+              "width": 60,
+              "height": 69,
+              "confidence": 0.9
+            },
+            {
+              "x": 720,
+              "y": 364,
+              "width": 64,
+              "height": 76,
+              "confidence": 0.885
+            },
+            {
+              "x": 849,
+              "y": 748,
+              "width": 85,
+              "height": 95,
+              "confidence": 0.875
+            },
+            {
+              "x": 1066,
+              "y": 321,
+              "width": 87,
+              "height": 104,
+              "confidence": 0.874
+            },
+            {
+              "x": 118,
+              "y": 385,
+              "width": 53,
+              "height": 72,
+              "confidence": 0.872
+            },
+            {
+              "x": 57,
+              "y": 360,
+              "width": 62,
+              "height": 76,
+              "confidence": 0.847
+            },
+            {
+              "x": 800,
+              "y": 354,
+              "width": 49,
+              "height": 59,
+              "confidence": 0.774
+            },
+            {
+              "x": 758,
+              "y": 489,
+              "width": 51,
+              "height": 72,
+              "confidence": 0.751
+            },
+            {
+              "x": 862,
+              "y": 388,
+              "width": 84,
+              "height": 94,
+              "confidence": 0.744
+            },
+            {
+              "x": 633,
+              "y": 371,
+              "width": 33,
+              "height": 41,
+              "confidence": 0.702
+            },
+            {
+              "x": 776,
+              "y": 676,
+              "width": 70,
+              "height": 92,
+              "confidence": 0.687
+            },
+            {
+              "x": 59,
+              "y": 491,
+              "width": 40,
+              "height": 51,
+              "confidence": 0.666
+            },
+            {
+              "x": 243,
+              "y": 363,
+              "width": 28,
+              "height": 33,
+              "confidence": 0.64
+            },
+            {
+              "x": 550,
+              "y": 388,
+              "width": 20,
+              "height": 26,
+              "confidence": 0.619
+            }
+          ],
+          "successful_strategy": "yunet_standard",
+          "image_analysis": {
+            "brightness": 116.9,
+            "contrast": 49.2,
+            "noise_level": 24.2,
+            "is_low_quality": true,
+            "preprocessing_applied": [
+              "denoise",
+              "sharpen"
+            ]
+          },
+          "detection_stats": {
+            "total_attempts": 2,
+            "successful_detections": 2,
+            "strategy_usage": {
+              "yunet_standard": 2,
+              "yunet_enhanced": 0,
+              "yunet_multiscale": 0,
+              "yunet_rotation": 0,
+              "fallback_cascade": 0
+            }
+          }
+        },
+        "model": "Adaptive YuNet + Cascades",
+        "total_faces_detected": 30,
+        "video_dimensions": {
+          "width": 1440,
+          "height": 1080,
+          "aspect_ratio": 1.333,
+          "orientation": "landscape"
+        }
+      },
+      "videoDimensions": {
+        "width": 1440,
+        "height": 1080,
+        "aspect_ratio": 1.333,
+        "orientation": "landscape"
+      },
+      "perceptualHash": "1010100100111011010001000001111101000111101010001000011011101001",
+      "id": -1,
+      "dbId": "67fa4bdc334832314c132484",
+      "type": "pinecone",
+      "preview": "https://d30vrxhapfwqn8.cloudfront.net//users/undefined/library/679a3225251ada350706b37b/1748536076518-ai9UVVO-kctFLoLbw9Ir4-preview.mp4",
+      "chosenByScriptwriter": true
+    }
+  },
+  {
+    "bounds": [
+      2,
+      2.28
+    ],
+    "alternative": {
+      "title": "The video captures a historic moment of celebration at the end of World War II, showing a large group of military personnel and civilians crowded on and around a military vehicle, likely a tank or truck. The scene appears to be set outdoors during daylight, with a soft, overcast sky and trees in the background, suggesting a post-war victory gathering or parade. Most individuals are wearing military uniforms in dark colors, predominantly navy blue and olive green, with a mix of standing and seated positions on the vehicle and surrounding area. The crowd seems jubilant and tightly packed, reflecting the collective relief and excitement of the war's conclusion in Europe. The colorized historical footage provides a vivid, intimate glimpse into the immediate aftermath of World War II, capturing the collective emotion and sense of triumph among Allied forces and civilians.",
+      "duration": 2.28,
+      "thumbnailUrl": "https://d30vrxhapfwqn8.cloudfront.net//users/cSRkiM5IRUf1ceemvXRPVp399MJ3/library/679a3225251ada350706b37b/1744456661674-c342f-thumbnail.png",
+      "link": "https://d30vrxhapfwqn8.cloudfront.net//users/cSRkiM5IRUf1ceemvXRPVp399MJ3/library/679a3225251ada350706b37b/1744456661674-69b38.mp4",
+      "score": 0.5947904586791992,
+      "isVisible": true,
+      "leftPosition": 1,
+      "topPosition": 1,
+      "offsetStart": 0,
+      "isVertical": false,
+      "complexity": "MODERATE",
+      "framing": "LS",
+      "depthOfField": "DF",
+      "perspective": "OP",
+      "cameraAngle": "EYEL",
+      "arollBroll": "BROLL",
+      "faceDetectionResults": {
+        "frame05s": {
+          "faceCount": 35,
+          "faces": [
+            {
+              "x": 613,
+              "y": 87,
+              "width": 30,
+              "height": 38,
+              "confidence": 0.912
+            },
+            {
+              "x": 673,
+              "y": 86,
+              "width": 28,
+              "height": 38,
+              "confidence": 0.905
+            },
+            {
+              "x": 396,
+              "y": 945,
+              "width": 31,
+              "height": 40,
+              "confidence": 0.893
+            },
+            {
+              "x": 983,
+              "y": 709,
+              "width": 31,
+              "height": 41,
+              "confidence": 0.89
+            },
+            {
+              "x": 478,
+              "y": 970,
+              "width": 33,
+              "height": 44,
+              "confidence": 0.886
+            },
+            {
+              "x": 860,
+              "y": 264,
+              "width": 27,
+              "height": 36,
+              "confidence": 0.884
+            },
+            {
+              "x": 1145,
+              "y": 932,
+              "width": 28,
+              "height": 38,
+              "confidence": 0.882
+            },
+            {
+              "x": 360,
+              "y": 972,
+              "width": 32,
+              "height": 43,
+              "confidence": 0.881
+            },
+            {
+              "x": 332,
+              "y": 634,
+              "width": 27,
+              "height": 34,
+              "confidence": 0.87
+            },
+            {
+              "x": 267,
+              "y": 811,
+              "width": 26,
+              "height": 33,
+              "confidence": 0.864
+            },
+            {
+              "x": 870,
+              "y": 688,
+              "width": 30,
+              "height": 37,
+              "confidence": 0.861
+            },
+            {
+              "x": 1211,
+              "y": 963,
+              "width": 28,
+              "height": 37,
+              "confidence": 0.86
+            },
+            {
+              "x": 1083,
+              "y": 598,
+              "width": 32,
+              "height": 41,
+              "confidence": 0.847
+            },
+            {
+              "x": 406,
+              "y": 532,
+              "width": 25,
+              "height": 35,
+              "confidence": 0.847
+            },
+            {
+              "x": 298,
+              "y": 947,
+              "width": 28,
+              "height": 34,
+              "confidence": 0.842
+            },
+            {
+              "x": 744,
+              "y": 272,
+              "width": 37,
+              "height": 45,
+              "confidence": 0.842
+            },
+            {
+              "x": 910,
+              "y": 722,
+              "width": 25,
+              "height": 33,
+              "confidence": 0.833
+            },
+            {
+              "x": 1266,
+              "y": 976,
+              "width": 26,
+              "height": 32,
+              "confidence": 0.833
+            },
+            {
+              "x": 444,
+              "y": 1022,
+              "width": 34,
+              "height": 47,
+              "confidence": 0.815
+            },
+            {
+              "x": 938,
+              "y": 262,
+              "width": 32,
+              "height": 35,
+              "confidence": 0.801
+            },
+            {
+              "x": 780,
+              "y": 719,
+              "width": 28,
+              "height": 35,
+              "confidence": 0.791
+            },
+            {
+              "x": 192,
+              "y": 807,
+              "width": 28,
+              "height": 37,
+              "confidence": 0.781
+            },
+            {
+              "x": 102,
+              "y": 799,
+              "width": 26,
+              "height": 31,
+              "confidence": 0.771
+            },
+            {
+              "x": 647,
+              "y": 172,
+              "width": 47,
+              "height": 53,
+              "confidence": 0.762
+            },
+            {
+              "x": 868,
+              "y": 773,
+              "width": 35,
+              "height": 46,
+              "confidence": 0.759
+            },
+            {
+              "x": 453,
+              "y": 521,
+              "width": 29,
+              "height": 34,
+              "confidence": 0.744
+            },
+            {
+              "x": 196,
+              "y": 917,
+              "width": 36,
+              "height": 37,
+              "confidence": 0.724
+            },
+            {
+              "x": 669,
+              "y": 599,
+              "width": 26,
+              "height": 34,
+              "confidence": 0.709
+            },
+            {
+              "x": 79,
+              "y": 850,
+              "width": 43,
+              "height": 52,
+              "confidence": 0.695
+            },
+            {
+              "x": 512,
+              "y": 569,
+              "width": 39,
+              "height": 51,
+              "confidence": 0.682
+            },
+            {
+              "x": 1274,
+              "y": 1039,
+              "width": 25,
+              "height": 28,
+              "confidence": 0.677
+            },
+            {
+              "x": 1408,
+              "y": 972,
+              "width": 23,
+              "height": 29,
+              "confidence": 0.67
+            },
+            {
+              "x": 937,
+              "y": 702,
+              "width": 22,
+              "height": 30,
+              "confidence": 0.611
+            },
+            {
+              "x": 285,
+              "y": 847,
+              "width": 30,
+              "height": 41,
+              "confidence": 0.61
+            },
+            {
+              "x": 141,
+              "y": 814,
+              "width": 32,
+              "height": 38,
+              "confidence": 0.61
+            }
+          ],
+          "successful_strategy": "yunet_standard",
+          "image_analysis": {
+            "brightness": 157.4,
+            "contrast": 89,
+            "noise_level": 18.6,
+            "is_low_quality": true,
+            "preprocessing_applied": [
+              "sharpen"
+            ]
+          },
+          "detection_stats": {
+            "total_attempts": 1,
+            "successful_detections": 1,
+            "strategy_usage": {
+              "yunet_standard": 1,
+              "yunet_enhanced": 0,
+              "yunet_multiscale": 0,
+              "yunet_rotation": 0,
+              "fallback_cascade": 0
+            }
+          }
+        },
+        "frame25s": {
+          "faceCount": 0,
+          "faces": []
+        },
+        "model": "Adaptive YuNet + Cascades",
+        "total_faces_detected": 35,
+        "video_dimensions": {
+          "width": 1440,
+          "height": 1080,
+          "aspect_ratio": 1.333,
+          "orientation": "landscape"
+        }
+      },
+      "videoDimensions": {
+        "width": 1440,
+        "height": 1080,
+        "aspect_ratio": 1.333,
+        "orientation": "landscape"
+      },
+      "perceptualHash": "1010000000000110000111100011001111110111011101011010010001110110",
+      "id": -1,
+      "dbId": "67fa4bd7334832314c132239",
+      "type": "pinecone",
+      "preview": "https://d30vrxhapfwqn8.cloudfront.net//users/undefined/library/679a3225251ada350706b37b/1748536049061-FaL1Nz5JvPBTKjbjUSENK-preview.mp4",
+      "chosenByScriptwriter": true
+    }
+  }
+]

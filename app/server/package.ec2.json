@@ -1,0 +1,9 @@
+{
+  "name": "videoai-server-ec2",
+  "version": "1.0.0",
+  "private": true,
+  "description": "EC2-only install list: native deps excluded from the esbuild bundle (see build-ec2.js). No workspace/shared monorepo refs.",
+  "dependencies": {
+    "pdf-parse": "2.4.5"
+  }
+}

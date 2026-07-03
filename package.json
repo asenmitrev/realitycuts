@@ -1,0 +1,25 @@
+{
+  "private": true,
+  "workspaces": [
+    "app/server",
+    "shared",
+    "app/client"
+  ],
+  "scripts": {
+    "test:unit:app": "yarn workspace server test:unit && yarn workspace client test:unit",
+    "test:unit": "yarn test:unit:app",
+    "build:prod": "yarn build:client:prod && yarn build:server",
+    "build:test": "yarn build:client:test && yarn build:server",
+    "build:client:prod": "yarn workspace client run build --mode prod",
+    "build:client:test": "yarn workspace client run build --mode test",
+    "build:client:uat": "yarn workspace client run build --mode uat",
+    "build:server": "yarn workspace server build",
+    "start:client": "yarn workspace client run dev",
+    "start:server": "yarn workspace server run start",
+    "typecheck": "yarn workspaces foreach -A run typecheck"
+  },
+  "packageManager": "yarn@4.12.0+sha256.1fe4e1193cbcd13a48d8f436bb17d3c672b049a5e32a758aab9866a073db1702",
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.6"
+  }
+}

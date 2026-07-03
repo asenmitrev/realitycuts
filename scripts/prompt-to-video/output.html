@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="animation-ready" content="true">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Soviet Union WWII Deaths Per Year</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 100vw;
+    height: 100vh;
+    background: #E8DCC8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: Georgia, serif;
+    overflow: hidden;
+  }
+  canvas {
+    display: block;
+  }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+canvas.width = 1920;
+canvas.height = 1080;
+
+// Scale canvas to fit viewport
+function resize() {
+  const scale = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+  canvas.style.width = (1920 * scale) + 'px';
+  canvas.style.height = (1080 * scale) + 'px';
+}
+resize();
+window.addEventListener('resize', resize);
+
+// Data: Soviet Union deaths per year (millions), approximate historical estimates
+const data = [
+  { year: '1941', deaths: 2.8 },
+  { year: '1942', deaths: 7.2 },
+  { year: '1943', deaths: 7.6 },
+  { year: '1944', deaths: 6.4 },
+  { year: '1945', deaths: 2.8 },
+];
+
+const PALETTE = {
+  bg: '#E8DCC8',
+  sand: '#D4C5A9',
+  terracotta: '#C4622D',
+  teal: '#7AADA8',
+  navy: '#3D5068',
+  brown: '#3D2B1F',
+  lightBrown: '#8B6F5E',
+  accent: '#E8956D',
+  grid: '#C8B89A',
+};
+
+const totalDuration = 6000; // ms
+let startTime = null;
+
+// Chart layout
+const chartLeft = 260;
+const chartRight = 1680;
+const chartTop = 160;
+const chartBottom = 820;
+const chartWidth = chartRight - chartLeft;
+const chartHeight = chartBottom - chartTop;
+
+const maxDeaths = 9; // millions, for scale
+const barCount = data.length;
+const barPad = 60;
+const barAreaWidth = chartWidth / barCount;
+const barWidth = barAreaWidth - barPad;
+
+// Bar colors: alternating terracotta / teal with variation
+const barColors = [
+  '#C4622D',
+  '#B5543E',
+  '#A8453A',
+  '#7AADA8',
+  '#6B9E9A',
+];
+
+// Icon: silhouette star (soviet)
+function drawStar(ctx, cx, cy, r, points, color) {
+  ctx.save();
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  for (let i = 0; i < points * 2; i++) {
+    const angle = (i * Math.PI) / points - Math.PI / 2;
+    const radius = i % 2 === 0 ? r : r * 0.4;
+    const x = cx + Math.cos(angle) * radius;
+    const y = cy + Math.sin(angle) * radius;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+function easeOutCubic(t) {
+  return 1 - Math.pow(1 - t, 3);
+}
+
+function easeInOutQuad(t) {
+  return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+}
+
+function drawBackground(ctx) {
+  // Background
+  ctx.fillStyle = PALETTE.bg;
+  ctx.fillRect(0, 0, 1920, 1080);
+
+  // Subtle top banner
+  ctx.fillStyle = PALETTE.navy;
+  ctx.fillRect(0, 0, 1920, 90);
+
+  // Decorative side strip
+  ctx.fillStyle = PALETTE.sand;
+  ctx.fillRect(0, 90, 1920, 10);
+
+  // Bottom strip
+  ctx.fillStyle = PALETTE.sand;
+  ctx.fillRect(0, 1040, 1920, 40);
+  ctx.fillStyle = PALETTE.terracotta;
+  ctx.fillRect(0, 1037, 1920, 6);
+}
+
+function drawTitles(ctx, titleProgress) {
+  // Main title
+  ctx.save();
+  ctx.globalAlpha = Math.min(1, titleProgress * 3);
+  ctx.fillStyle = '#E8DCC8';
+  ctx.font = 'bold 42px Georgia, serif';
+  ctx.letterSpacing = '3px';
+  ctx.textAlign = 'center';
+  ctx.fillText('SOVIET UNION', 960, 48);
+
+  ctx.font = '26px Georgia, serif';
+  ctx.fillStyle = PALETTE.accent;
+  ctx.fillText('World War II · Estimated Deaths by Year (Millions)', 960, 78);
+
+  // Stars in header
+  for (let i = 0; i < 5; i++) {
+    drawStar(ctx, 200 + i * 40, 45, 12, 5, PALETTE.accent);
+    drawStar(ctx, 1700 + i * 40, 45, 12, 5, PALETTE.accent);
+  }
+
+  ctx.restore();
+}
+
+function drawGrid(ctx, gridProgress) {
+  ctx.save();
+  ctx.globalAlpha = Math.min(1, gridProgress) * 0.9;
+
+  // Horizontal grid lines
+  const gridLines = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+  gridLines.forEach(val => {
+    const y = chartBottom - (val / maxDeaths) * chartHeight;
+    ctx.strokeStyle = PALETTE.grid;
+    ctx.lineWidth = val === 0 ? 2.5 : 1;
+    ctx.setLineDash(val === 0 ? [] : [10, 8]);
+    ctx.beginPath();
+    ctx.moveTo(chartLeft, y);
+    ctx.lineTo(chartRight, y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Y-axis labels
+    if (val > 0) {
+      ctx.fillStyle = PALETTE.brown;
+      ctx.font = 'bold 24px Georgia, serif';
+      ctx.textAlign = 'right';
+      ctx.fillText(val + 'M', chartLeft - 20, y + 8);
+    }
+  });
+
+  // Y-axis label
+  ctx.save();
+  ctx.translate(80, (chartTop + chartBottom) / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillStyle = PALETTE.lightBrown;
+  ctx.font = '22px Georgia, serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Deaths (Millions)', 0, 0);
+  ctx.restore();
+
+  // Left axis line
+  ctx.strokeStyle = PALETTE.brown;
+  ctx.lineWidth = 3;
+  ctx.setLineDash([]);
+  ctx.beginPath();
+  ctx.moveTo(chartLeft, chartTop - 10);
+  ctx.lineTo(chartLeft, chartBottom);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+function drawBars(ctx, barsProgress) {
+  data.forEach((d, i) => {
+    const barProgress = Math.min(1, Math.max(0, (barsProgress * (barCount + 0.5) - i * 0.8) / 1));
+    const easedP = easeOutCubic(Math.min(1, barProgress));
+
+    const barH = (d.deaths / maxDeaths) * chartHeight * easedP;
+    const x = chartLeft + i * barAreaWidth + barPad / 2;
+    const y = chartBottom - barH;
+    const w = barWidth;
+
+    if (easedP <= 0) return;
+
+    // Shadow
+    ctx.save();
+    ctx.globalAlpha = 0.18 * easedP;
+    ctx.fillStyle = PALETTE.brown;
+    ctx.beginPath();
+    ctx.roundRect(x + 8, y + 8, w, barH, [6, 6, 0, 0]);
+    ctx.fill();
+    ctx.restore();
+
+    // Main bar
+    ctx.save();
+    // Gradient fill
+    const grad = ctx.createLinearGradient(x, y, x + w, chartBottom);
+    const col = barColors[i];
+    grad.addColorStop(0, lightenColor(col, 30));
+    grad.addColorStop(0.5, col);
+    grad.addColorStop(1, darkenColor(col, 20));
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.roundRect(x, y, w, barH, [8, 8, 0, 0]);
+    ctx.fill();
+
+    // Highlight stripe
+    ctx.fillStyle = 'rgba(255,255,255,0.13)';
+    ctx.beginPath();
+    ctx.roundRect(x + 8, y + 4, w * 0.35, barH * 0.6, [4, 4, 4, 4]);
+    ctx.fill();
+
+    ctx.restore();
+
+    // Year label
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, easedP * 2);
+    ctx.fillStyle = PALETTE.brown;
+    ctx.font = 'bold 32px Georgia, serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(d.year, x + w / 2, chartBottom + 50);
+
+    // Death count label on bar
+    if (easedP > 0.5) {
+      ctx.globalAlpha = Math.min(1, (easedP - 0.5) * 4);
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 30px Georgia, serif';
+      ctx.textAlign = 'center';
+      ctx.shadowColor = 'rgba(0,0,0,0.3)';
+      ctx.shadowBlur = 4;
+      ctx.fillText(d.deaths.toFixed(1) + 'M', x + w / 2, y - 18);
+      ctx.shadowBlur = 0;
+    }
+
+    ctx.restore();
+  });
+}
+
+function lightenColor(hex, amt) {
+  let r = parseInt(hex.slice(1, 3), 16);
+  let g = parseInt(hex.slice(3, 5), 16);
+  let b = parseInt(hex.slice(5, 7), 16);
+  r = Math.min(255, r + amt);
+  g = Math.min(255, g + amt);
+  b = Math.min(255, b + amt);
+  return `rgb(${r},${g},${b})`;
+}
+function darkenColor(hex, amt) {
+  let r = parseInt(hex.slice(1, 3), 16);
+  let g = parseInt(hex.slice(3, 5), 16);
+  let b = parseInt(hex.slice(5, 7), 16);
+  r = Math.max(0, r - amt);
+  g = Math.max(0, g - amt);
+  b = Math.max(0, b - amt);
+  return `rgb(${r},${g},${b})`;
+}
+
+function drawTotalAnnotation(ctx, progress) {
+  if (progress <= 0) return;
+  ctx.save();
+  ctx.globalAlpha = Math.min(1, progress * 2);
+
+  // Total annotation box
+  const bx = chartRight + 30;
+  const by = chartTop + 60;
+  const bw = 200;
+  const bh = 180;
+
+  ctx.fillStyle = PALETTE.navy;
+  ctx.beginPath();
+  ctx.roundRect(bx, by, bw, bh, 12);
+  ctx.fill();
+
+  ctx.fillStyle = PALETTE.accent;
+  ctx.font = 'bold 20px Georgia, serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('TOTAL', bx + bw / 2, by + 38);
+
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 40px Georgia, serif';
+  ctx.fillText('26.6M', bx + bw / 2, by + 92);
+
+  ctx.fillStyle = PALETTE.sand;
+  ctx.font = '18px Georgia, serif';
+  ctx.fillText('estimated', bx + bw / 2, by + 122);
+  ctx.fillText('deaths', bx + bw / 2, by + 148);
+
+  // Stars
+  drawStar(ctx, bx + bw / 2, by + 166, 10, 5, PALETTE.accent);
+
+  ctx.restore();
+}
+
+function drawSourceNote(ctx, progress) {
+  if (progress <= 0) return;
+  ctx.save();
+  ctx.globalAlpha = Math.min(1, progress);
+  ctx.fillStyle = PALETTE.lightBrown;
+  ctx.font = '18px Georgia, serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('Source: Historical estimates vary. Data approximate. Includes military and civilian losses.', 260, 1020);
+  ctx.restore();
+}
+
+function drawDecorativeElements(ctx, progress) {
+  // Decorative dots along bottom bar
+  ctx.save();
+  ctx.globalAlpha = 0.5 * Math.min(1, progress);
+  for (let i = 0; i < 40; i++) {
+    ctx.fillStyle = i % 2 === 0 ? PALETTE.terracotta : PALETTE.teal;
+    ctx.beginPath();
+    ctx.arc(260 + i * 38, 1050, 4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+function animate(timestamp) {
+  if (!startTime) startTime = timestamp;
+  const elapsed = timestamp - startTime;
+  const t = Math.min(1, elapsed / totalDuration);
+
+  ctx.clearRect(0, 0, 1920, 1080);
+  drawBackground(ctx);
+
+  // Staggered animation phases
+  const titleProgress = Math.min(1, t / 0.08);
+  const gridProgress = Math.min(1, Math.max(0, (t - 0.05) / 0.15));
+  const barsProgress = Math.min(1, Math.max(0, (t - 0.15) / 0.55));
+  const totalProgress = Math.min(1, Math.max(0, (t - 0.70) / 0.15));
+  const footerProgress = Math.min(1, Math.max(0, (t - 0.85) / 0.1));
+
+  drawGrid(ctx, gridProgress);
+  drawBars(ctx, barsProgress);
+  drawTitles(ctx, titleProgress);
+  drawTotalAnnotation(ctx, totalProgress);
+  drawDecorativeElements(ctx, footerProgress);
+  drawSourceNote(ctx, footerProgress);
+
+  if (t < 1) {
+    requestAnimationFrame(animate);
+  } else {
+    // Keep drawing final frame
+    requestAnimationFrame(() => {
+      ctx.clearRect(0, 0, 1920, 1080);
+      drawBackground(ctx);
+      drawGrid(ctx, 1);
+      drawBars(ctx, 1);
+      drawTitles(ctx, 1);
+      drawTotalAnnotation(ctx, 1);
+      drawDecorativeElements(ctx, 1);
+      drawSourceNote(ctx, 1);
+    });
+  }
+}
+
+// Polyfill roundRect for older browsers
+if (!CanvasRenderingContext2D.prototype.roundRect) {
+  CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+    if (typeof r === 'number') r = [r, r, r, r];
+    const [tl, tr, br, bl] = r;
+    this.beginPath();
+    this.moveTo(x + tl, y);
+    this.lineTo(x + w - tr, y);
+    this.quadraticCurveTo(x + w, y, x + w, y + tr);
+    this.lineTo(x + w, y + h - br);
+    this.quadraticCurveTo(x + w, y + h, x + w - br, y + h);
+    this.lineTo(x + bl, y + h);
+    this.quadraticCurveTo(x, y + h, x, y + h - bl);
+    this.lineTo(x, y + tl);
+    this.quadraticCurveTo(x, y, x + tl, y);
+    this.closePath();
+    return this;
+  };
+}
+
+requestAnimationFrame(animate);
+</script>
+</body>
+</html>

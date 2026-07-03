@@ -1,0 +1,9 @@
+export const RULER_HEIGHT = 25;
+export const RULER_HEIGHT_MOBILE = 18;
+export const PLAYLIST_PREVIEW_HEIGHT = 120;
+export const PLAYLIST_PREVIEW_HEIGHT_MOBILE = 80;
+export const CAPTIONS_TIMELINE_HEIGHT = 30;
+export const HEADER_HEIGHT = 56;
+export const HEADER_MARGIN = 32;
+export const PIXELS_PER_SEC = 25;
+export const AUDIO_VOLUME_MODIFIER = 0.1;
