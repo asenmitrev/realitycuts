@@ -19,6 +19,7 @@ node_modules/
 
 .env
 .env.*
+!.env.example
 **/subtitles-octopus-worker.js
 .cloc
 functions/venvs/
