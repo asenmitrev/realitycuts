@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test:unit": "vitest run",
-    "build": "rm -rf ./dist_server/ && node build.js && cp .env.* dist_server/ && cp .vertex-key.json dist_server/",
+    "build": "rm -rf ./dist_server/ && node build.js && cp .env dist_server/ && cp .vertex-key.json dist_server/",
     "build:lambda": "node build.js",
     "build:traditional": "rm -rf ./dist/ && yarn tsc --noEmit=false --outDir ./dist && cp -r images ./dist/ 2>/dev/null || true",
     "build:ec2": "rm -rf ./dist/ && node build-ec2.js",

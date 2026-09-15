@@ -16,7 +16,7 @@ node_modules/
 .claude/
 .pi/
 .nwave/
-
+data/
 .env
 .env.*
 !.env.example
