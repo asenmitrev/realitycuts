@@ -1,11 +1,12 @@
 import express from 'express';
 import { authenticateJWT } from '../middleware/auth-middleware';
 import { restrictRoleAccess } from '../middleware/role-access-middleware';
-import { upload } from '../middleware/multer';
+import { upload, libraryImportUpload } from '../middleware/multer';
 import { configureDotenv } from '../config/dotenv';
 import { asyncHandler } from '../utils/async-handler';
 import { validateRequest } from '../middleware/validate-request';
 import libraryController from '../controllers/library.controller';
+import libraryTransferController from '../controllers/library-transfer.controller';
 import {
   getTagsQuerySchema,
   getBrollQuerySchema,
@@ -13,6 +14,7 @@ import {
   libraryIdParamSchema,
   libraryIdAndUploadIdParamSchema,
   libraryIdAndBrollIdParamSchema,
+  jobIdParamSchema,
   createLibraryBodySchema,
   processLibraryBodySchema,
   reprocessLibraryBodySchema,
@@ -44,6 +46,22 @@ router.get(
   authenticateJWT,
   validateRequest({ query: getTagsQuerySchema }),
   asyncHandler(libraryController.getTags)
+);
+
+// Restore a library from a backup ZIP (see shared/types/library-export.ts for the format)
+router.post(
+  '/import',
+  libraryImportUpload.single('file'),
+  authenticateJWT,
+  restrictRoleAccess(['admin', 'editor', 'user']),
+  asyncHandler(libraryTransferController.startImport)
+);
+
+router.get(
+  '/transfer-jobs/:jobId',
+  authenticateJWT,
+  validateRequest({ params: jobIdParamSchema }),
+  asyncHandler(libraryTransferController.getJobStatus)
 );
 
 // Create a new library item

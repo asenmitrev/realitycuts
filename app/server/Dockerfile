@@ -48,9 +48,9 @@ COPY --from=builder /app/app/server/dist_server ./dist
 COPY --from=builder /app/app/server/package.json ./package.json
 COPY --from=builder /app/shared/package.json ./shared/package.json
 
-EXPOSE 3010
+EXPOSE 3021
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:3010/api/health || exit 1
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3021/api/health || exit 1
 
 CMD ["node", "dist/index.js"]

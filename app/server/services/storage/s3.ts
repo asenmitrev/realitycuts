@@ -2,13 +2,16 @@ import {
   S3Client,
   PutObjectCommand,
   DeleteObjectCommand,
+  DeleteObjectsCommand,
   GetObjectCommand,
   HeadObjectCommand,
+  ListObjectsV2Command,
   PutObjectAclCommand,
   CopyObjectCommand
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import fs from 'fs';
+import type { Readable } from 'stream';
 import {
   getS3FileUrl,
   S3_BUCKET,
@@ -384,4 +387,104 @@ export async function setPublicReadAcl(s3Key: string): Promise<void> {
       // Don't throw - allow upload to succeed even if ACL setting fails
     }
   }
+}
+
+/**
+ * Get an S3 object as a stream, without buffering it into memory. Used for large
+ * objects (e.g. a library backup ZIP) where getS3ObjectBuffer would hold the whole
+ * file in memory at once.
+ */
+export async function getObjectStream(
+  key: string
+): Promise<{ body: Readable; contentLength?: number; contentType?: string }> {
+  const command = new GetObjectCommand({ Bucket: S3_BUCKET, Key: key });
+  const response = await s3.send(command);
+  if (!response.Body) {
+    throw new Error(`S3 object has no body: ${key}`);
+  }
+  return {
+    body: response.Body as Readable,
+    contentLength: response.ContentLength,
+    contentType: response.ContentType
+  };
+}
+
+/**
+ * Upload a local file to S3/MinIO without the public-read ACL. Used for system-internal
+ * temp objects (e.g. an uploaded library backup ZIP awaiting processing) that aren't
+ * user media and shouldn't be tracked as one in S3Upload.
+ */
+export async function uploadPrivateFileToS3(
+  filepath: string,
+  key: string,
+  mimeType: string = 'application/octet-stream'
+): Promise<void> {
+  await s3.send(
+    new PutObjectCommand({
+      Bucket: S3_BUCKET,
+      Key: key,
+      Body: fs.createReadStream(filepath),
+      ContentType: mimeType
+    })
+  );
+}
+
+/**
+ * Upload a Readable stream directly to S3 (e.g. a zip entry stream during library
+ * import) without buffering it to disk first. `contentLength` must be known upfront
+ * (yauzl exposes it as `entry.uncompressedSize`) since S3 requires it for a plain
+ * (non-multipart) PutObject with a stream body.
+ */
+export async function uploadReadableToS3(
+  stream: Readable,
+  key: string,
+  opts: { contentLength: number; mimeType?: string; publicRead?: boolean }
+): Promise<void> {
+  await s3.send(
+    new PutObjectCommand({
+      Bucket: S3_BUCKET,
+      Key: key,
+      Body: stream,
+      ContentLength: opts.contentLength,
+      ContentType: opts.mimeType,
+      ACL: opts.publicRead ? 'public-read' : undefined,
+      CacheControl: opts.publicRead ? 'max-age=31536000' : undefined
+    })
+  );
+}
+
+/**
+ * Delete every object under an S3 prefix (best-effort bulk cleanup, e.g. rolling back
+ * a partially-created library after a failed import).
+ */
+export async function deleteS3Prefix(prefix: string): Promise<number> {
+  let deleted = 0;
+  let continuationToken: string | undefined;
+  try {
+    do {
+      const res = await s3.send(
+        new ListObjectsV2Command({
+          Bucket: S3_BUCKET,
+          Prefix: prefix,
+          MaxKeys: 1000,
+          ContinuationToken: continuationToken
+        })
+      );
+      const contents = res.Contents ?? [];
+      if (contents.length > 0) {
+        await s3.send(
+          new DeleteObjectsCommand({
+            Bucket: S3_BUCKET,
+            Delete: { Objects: contents.map(c => ({ Key: c.Key! })) }
+          })
+        );
+        deleted += contents.length;
+      }
+      continuationToken = res.IsTruncated ? res.NextContinuationToken : undefined;
+    } while (continuationToken);
+  } catch (error) {
+    logger.error('Error deleting S3 prefix', { Error: error, Prefix: prefix });
+    throw error;
+  }
+  return deleted;
 }

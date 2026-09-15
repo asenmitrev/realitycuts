@@ -31,3 +31,10 @@ export const QWEN_BASE_URL = process.env.QWEN_BASE_URL;
 export const LOCAL_LLM_BASE_URL = process.env.LOCAL_LLM_BASE_URL;
 export const DEEPGRAM_API_KEY = process.env.DEEPGRAM_API_KEY;
 export const REPLICATE_API_TOKEN = process.env.REPLICATE_API_TOKEN;
+
+// Max size of a library backup ZIP accepted by POST /api/library/import. Self-hosted
+// instances typically run as a single node with local disk + MinIO on the same box, so
+// this is set much lower than a multi-tenant SaaS default (master uses 10GB) to avoid one
+// upload exhausting local disk before it's pushed to MinIO. Override via env if needed.
+export const LIBRARY_IMPORT_MAX_ZIP_BYTES =
+  parseInt(process.env.LIBRARY_IMPORT_MAX_ZIP_BYTES ?? '', 10) || 5 * 1024 * 1024 * 1024; // 5GB

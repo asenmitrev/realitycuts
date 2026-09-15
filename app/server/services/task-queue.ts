@@ -12,6 +12,7 @@ import type {
   ChatVideoFinalizationEventData,
   ExportJobEventData,
   FCPXMLExportEventData,
+  LibraryImportEventData,
   LibraryItemClassificationEventData,
   LibraryItemDeletionEventData,
   LibraryItemMediaGenerationEventData,
@@ -356,6 +357,31 @@ export async function enqueueLibraryItemDeletionTask(
     return { MessageId: job.id };
   } catch (error) {
     logger.error("Error enqueuing library item deletion job via BullMQ:", error);
+    throw error;
+  }
+}
+
+export async function enqueueLibraryImportTask(
+  eventData: LibraryImportEventData,
+) {
+  try {
+    const { getQueue } = await import("./bullmq/queues.js");
+    const { QUEUE_NAMES } = await import("./bullmq/types.js");
+    const queue = await getQueue(QUEUE_NAMES.LIBRARY_IMPORT);
+    const job = await queue.add("library-import", eventData, {
+      jobId: `library-import-${eventData.jobId}`,
+      // The processor deletes the temp ZIP (local + MinIO) after every attempt,
+      // success or failure, so a BullMQ-driven retry would find nothing to read.
+      // A failed import is retried by the user re-uploading, not automatically.
+      attempts: 1,
+    });
+    logger.debug("Library import job enqueued via BullMQ", {
+      jobId: job.id,
+      importJobId: eventData.jobId,
+    });
+    return { MessageId: job.id };
+  } catch (error) {
+    logger.error("Error enqueuing library import job via BullMQ:", error);
     throw error;
   }
 }

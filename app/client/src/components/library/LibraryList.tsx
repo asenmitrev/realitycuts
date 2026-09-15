@@ -31,8 +31,9 @@ import {
   Alert
 } from '@chakra-ui/react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FaSearch } from 'react-icons/fa';
+import { FaSearch, FaUpload } from 'react-icons/fa';
 import { useApiService } from '../../hooks/useApiService';
+import { useLibraryImport } from '../../hooks/useLibraryImport';
 import { calculateTotalProgress } from 'shared/utils/misc';
 import { useQuery } from 'react-query';
 import { IBrollFootageMetadata, ILibrary, Tag } from '../../types';
@@ -179,6 +180,7 @@ const LibraryList: React.FC = () => {
   const userId = useUserId();
   const [tabIndex, setTabIndex] = useState(0);
   const [shouldAutoStart] = useState(false);
+  const { isImporting, fileInputRef, openFilePicker, handleFileChange } = useLibraryImport();
 
   // Personal libraries query
   const { data: libraries, isLoading } = useQuery(
@@ -237,6 +239,24 @@ const LibraryList: React.FC = () => {
             </Heading>
             <HStack mb={{ base: 12, md: 0 }}>
               <WalkthroughButton walkthroughType="libraryList" isSample={shouldAutoStart} />
+              <input
+                type="file"
+                accept=".zip"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                hidden
+              />
+              <Button
+                leftIcon={<FaUpload />}
+                size="sm"
+                variant="outline"
+                colorScheme="white"
+                onClick={openFilePicker}
+                isLoading={isImporting}
+                loadingText="Importing"
+              >
+                Import Library
+              </Button>
               <TabList borderColor="gray.700" gap={2}>
                 <Tab p={0} fontWeight="bold" as="div">
                   <Button

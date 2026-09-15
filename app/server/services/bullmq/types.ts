@@ -12,6 +12,7 @@ import type {
 	ChatVideoFinalizationEventData,
 	ExportJobEventData,
 	FCPXMLExportEventData,
+	LibraryImportEventData,
 	LibraryItemDeletionEventData,
 	LibraryItemMediaGenerationEventData,
 	LibraryItemProcessingEventData,
@@ -23,6 +24,7 @@ export const QUEUE_NAMES = {
 	LIBRARY_ITEM_PROCESSING: "library-item-processing",
 	LIBRARY_ITEM_DELETION: "library-item-deletion",
 	LIBRARY_ITEM_MEDIA_GENERATION: "library-item-media-generation",
+	LIBRARY_IMPORT: "library-import",
 	EXPORTER: "exporter",
 	FCPXML_EXPORT: "fcpxml-export",
 	CHAT_VIDEO_FINALIZATION: "chat-video-finalization",
@@ -48,6 +50,7 @@ export interface JobPayloadMap {
 	"library-item-processing": LibraryItemProcessingEventData;
 	"library-item-deletion": LibraryItemDeletionEventData;
 	"library-item-media-generation": LibraryItemMediaGenerationEventData;
+	"library-import": LibraryImportEventData;
 	"exporter": ExportJobEventData;
 	"fcpxml-export": FCPXMLExportEventData;
 	"chat-video-finalization": ChatVideoFinalizationEventData;
@@ -67,6 +70,9 @@ export const QUEUE_CONCURRENCY: Record<QueueName, number> = {
 	"library-item-processing": 10,
 	"library-item-deletion": 5,
 	"library-item-media-generation": 20,
+	// Low concurrency: each job streams a whole ZIP's worth of media through a single
+	// worker process on one box, so a few can run at once without saturating disk/network.
+	"library-import": 2,
 	"exporter": 5,
 	"fcpxml-export": 5,
 	"chat-video-finalization": 10,

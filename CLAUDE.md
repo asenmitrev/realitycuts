@@ -12,8 +12,8 @@ Yarn 4 workspaces.
 
 ```
 videoai/
-├── app/client/          # React 19 + Vite frontend (port 3011 dev)
-├── app/server/          # Express + TypeScript backend (port 3010 dev)
+├── app/client/          # React 19 + Vite frontend (port 3020 dev)
+├── app/server/          # Express + TypeScript backend (port 3021 dev)
 ├── shared/              # Shared TypeScript types and utilities
 ├── services/            # Workspace service packages, if present
 ├── scripts/             # Utility scripts
@@ -110,12 +110,12 @@ Services:
 - `redis`: BullMQ broker on port `6379`.
 - `minio`: S3-compatible object storage on port `9000`, console on `9001`.
 - `minio-init`: creates bucket `1703-media-app-2` and sets public access for local media URLs.
-- `server`: Express API on port `3010`, with BullMQ workers running in-process.
-- `client`: frontend on port `3011`.
+- `server`: Express API on port `3021`, with BullMQ workers running in-process.
+- `client`: frontend on port `3020`.
 
 Default MinIO credentials are `minioadmin` / `minioadmin` unless overridden with `MINIO_ACCESS_KEY` and `MINIO_SECRET_KEY`.
 
-The compose file sets `ENVIRONMENT=local`, `REDIS_HOST=redis`, `MINIO_ENDPOINT=http://minio:9000`, `MEDIA_BASE_URL=http://localhost:9000`, `CLIENT_URL=http://localhost:3011`, and `API_URL=http://localhost:3010`.
+The compose file sets `ENVIRONMENT=local`, `REDIS_HOST=redis`, `MINIO_ENDPOINT=http://minio:9000`, `MEDIA_BASE_URL=http://localhost:9000`, `CLIENT_URL=http://localhost:3020`, and `API_URL=http://localhost:3021`.
 
 MongoDB is configured by `MONGODB_URI`. The compose file currently defaults it to `mongodb://mongo:27017/videoai`; make sure a MongoDB service or reachable external MongoDB is available when using the stack.
 
@@ -165,10 +165,10 @@ Key server variables:
 ```bash
 # Runtime
 ENVIRONMENT=local
-PORT=3010
+PORT=3021
 MONGODB_URI=mongodb://...
-CLIENT_URL=http://localhost:3011
-API_URL=http://localhost:3010
+CLIENT_URL=http://localhost:3020
+API_URL=http://localhost:3021
 
 # Auth
 JWT_SECRET=...

@@ -43,6 +43,12 @@ export type ExportJobEventData = {
 	version: "1.0.0";
 };
 
+/** Library backup import — the processor loads everything else from the LibraryExportJob document. */
+export type LibraryImportEventData = {
+	jobId: string;
+	version: "1.0.0";
+};
+
 export type FCPXMLExportEventData = {
 	exportJobId: string;
 	version: "1.0.0";

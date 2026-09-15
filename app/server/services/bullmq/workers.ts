@@ -97,6 +97,24 @@ async function getLibraryItemMediaHandler() {
 }
 
 // ---------------------------------------------------------------------------
+// Library import handler
+// ---------------------------------------------------------------------------
+
+let processLibraryImportTask:
+	| ((data: JobPayloadMap["library-import"]) => Promise<void>)
+	| null = null;
+
+async function getLibraryImportHandler() {
+	if (!processLibraryImportTask) {
+		const { processLibraryImportTask: handler } = await import(
+			"./library-import-processor.js"
+		);
+		processLibraryImportTask = handler;
+	}
+	return processLibraryImportTask;
+}
+
+// ---------------------------------------------------------------------------
 // Export task handlers (main exporter, fcpxml)
 // ---------------------------------------------------------------------------
 
@@ -237,6 +255,11 @@ const HANDLERS: Partial<
 		if (!handler)
 			throw new Error("Library item media handler not available");
 		return handler(payload as JobPayloadMap["library-item-media-generation"]);
+	},
+	"library-import": async (payload) => {
+		const handler = await getLibraryImportHandler();
+		if (!handler) throw new Error("Library import handler not available");
+		return handler(payload as JobPayloadMap["library-import"]);
 	},
 	// Export queues
 	"exporter": async (payload) => {

@@ -23,6 +23,10 @@ export const libraryIdAndBrollIdParamSchema = mongoIdParamSchema.extend({
   brollId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid MongoDB ObjectId')
 });
 
+export const jobIdParamSchema = z.object({
+  jobId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid MongoDB ObjectId')
+});
+
 // Body schemas
 export const createLibraryBodySchema = z.object({}).passthrough(); // Allow any body for library creation
 

@@ -73,6 +73,7 @@
     "winston-daily-rotate-file": "^5.0.0",
     "winston-loggly-bulk": "^3.3.2",
     "xml": "^1.0.1",
+    "yauzl": "^3.4.0",
     "zod": "^3.25.32"
   },
   "devDependencies": {
@@ -92,6 +93,7 @@
     "@types/uuid": "^9.0.8",
     "@types/winston-loggly-bulk": "^3.0.6",
     "@types/xml": "^1.0.11",
+    "@types/yauzl": "^3.4.0",
     "@vitest/coverage-v8": "^1.2.2",
     "esbuild": "^0.21.2",
     "esbuild-plugin-copy": "^2.1.1",

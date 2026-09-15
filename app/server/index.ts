@@ -10,13 +10,19 @@ import { logger } from './services/logging';
 import { createHttpTerminator } from 'http-terminator';
 import { createApp } from './app';
 
-const port = process.env.PORT ?? 3010;
+const port = process.env.PORT ?? 3021;
 
 main().catch(err => logger.error(err));
 
 async function main() {
   await connectMongo(true);
   await ensureBrollVectorSearchIndex();
+
+  // Fail/clean up any library import job orphaned by a previous server restart
+  // (fire-and-forget — shouldn't delay boot).
+  void import('./services/library-transfer.service.js')
+    .then(({ libraryTransferService }) => libraryTransferService.cleanupStaleImportJobs())
+    .catch(err => logger.error('Failed to clean up stale library import jobs', { error: err?.toString() }));
 
   // Initialize BullMQ workers (EC2/PM2 mode only)
   const { startWorkers, shutdown, scheduleAutomationCheckerJob } = await import('./services/bullmq/workers.js');

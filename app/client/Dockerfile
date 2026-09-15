@@ -23,6 +23,6 @@ WORKDIR /app
 
 COPY --from=builder /app/app/client/dist ./dist
 
-EXPOSE 3011
+EXPOSE 3020
 
-CMD ["serve", "-s", "dist", "-l", "3011"]
+CMD ["serve", "-s", "dist", "-l", "3020"]

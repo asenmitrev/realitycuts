@@ -11,8 +11,8 @@ yarn install
 docker compose up
 ```
 
-- Client: http://localhost:3011
-- API: http://localhost:3010
+- Client: http://localhost:3020
+- API: http://localhost:3021
 - MinIO console: http://localhost:9001 (default credentials `minioadmin` / `minioadmin`)
 
 For development outside Docker, run `yarn start:server` and `yarn start:client` with a `.env.dev` configured per `app/server/config/dotenv.ts` (see [CLAUDE.md](CLAUDE.md) for the full environment variable reference). You will need API keys for the AI services you plan to use — at minimum an LLM provider (Anthropic, OpenAI, or a local endpoint) and ElevenLabs for text-to-speech.

@@ -5850,6 +5850,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/yauzl@npm:^3.4.0":
+  version: 3.4.0
+  resolution: "@types/yauzl@npm:3.4.0"
+  dependencies:
+    "@types/node": "npm:*"
+  checksum: 10c0/9992cf7bf129466016baa4e99e05ad524afe2ff6e5d84e7408f2a7123bc4af3b4bfb639237308574b80e7e435571b6e1af6113910d166e8ea8b80da422ba8ecb
+  languageName: node
+  linkType: hard
+
 "@typescript-eslint/eslint-plugin@npm:^6.10.0":
   version: 6.21.0
   resolution: "@typescript-eslint/eslint-plugin@npm:6.21.0"
@@ -13387,6 +13396,7 @@ __metadata:
     "@types/uuid": "npm:^9.0.8"
     "@types/winston-loggly-bulk": "npm:^3.0.6"
     "@types/xml": "npm:^1.0.11"
+    "@types/yauzl": "npm:^3.4.0"
     "@vitest/coverage-v8": "npm:^1.2.2"
     archiver: "npm:^7.0.1"
     axios: "npm:^1.6.7"
@@ -13433,6 +13443,7 @@ __metadata:
     winston-daily-rotate-file: "npm:^5.0.0"
     winston-loggly-bulk: "npm:^3.3.2"
     xml: "npm:^1.0.1"
+    yauzl: "npm:^3.4.0"
     zod: "npm:^3.25.32"
   languageName: unknown
   linkType: soft
@@ -15280,6 +15291,15 @@ __metadata:
     buffer-crc32: "npm:~0.2.3"
     fd-slicer: "npm:~1.1.0"
   checksum: 10c0/f265002af7541b9ec3589a27f5fb8f11cf348b53cc15e2751272e3c062cd73f3e715bc72d43257de71bbaecae446c3f1b14af7559e8ab0261625375541816422
+  languageName: node
+  linkType: hard
+
+"yauzl@npm:^3.4.0":
+  version: 3.4.0
+  resolution: "yauzl@npm:3.4.0"
+  dependencies:
+    pend: "npm:~1.2.0"
+  checksum: 10c0/17a98c42c0065e8af429eb8a61f7a0e4562181ed54080366b838f34f741b6829f167f804787c86b7646bb042707f35871739f053de0548285e405a2eae4da025
   languageName: node
   linkType: hard
 

@@ -13,6 +13,7 @@ export * from './export-job';
 export * from './followed-channel';
 export * from './highlight-data';
 export * from './highlight-instance';
+export * from './library-export-job';
 export * from './library-task-settings';
 export * from './library-upload';
 export * from './library';

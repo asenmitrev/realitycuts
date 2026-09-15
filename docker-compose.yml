@@ -67,7 +67,7 @@ services:
       context: .
       dockerfile: app/server/Dockerfile
     ports:
-      - "3010:3010"
+      - "3021:3021"
     # Real API keys live in app/server/.env; explicit `environment` entries
     # below override anything from this file (hosts/URLs for the compose network).
     env_file:
@@ -76,7 +76,7 @@ services:
       - ./app/server/.vertex-key.json:/app/.vertex-key.json:ro
     environment:
       - ENVIRONMENT=local
-      - PORT=3010
+      - PORT=3021
       - MONGODB_URI=${MONGODB_URI:-mongodb://${MONGO_ROOT_USERNAME:-admin}:${MONGO_ROOT_PASSWORD:-adminpassword}@mongo:27017/videoai?authSource=admin&directConnection=true}
       - REDIS_HOST=redis
       - MINIO_ENDPOINT=http://minio:9000
@@ -84,8 +84,8 @@ services:
       - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
       - MINIO_BUCKET=1703-media-app-2
       - MEDIA_BASE_URL=http://localhost:9000
-      - CLIENT_URL=http://localhost:3011
-      - API_URL=http://localhost:3010
+      - CLIENT_URL=http://localhost:3020
+      - API_URL=http://localhost:3021
     depends_on:
       redis:
         condition: service_healthy
@@ -101,7 +101,7 @@ services:
       context: .
       dockerfile: app/client/Dockerfile
     ports:
-      - "3011:3011"
+      - "3020:3020"
     depends_on:
       - server
 

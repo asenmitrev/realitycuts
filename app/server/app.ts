@@ -23,12 +23,12 @@ export function createApp() {
   });
 
   // CORS — allow credentials (httpOnly refresh token cookies)
-  const clientUrl = process.env.CLIENT_URL || 'http://localhost:3011';
+  const clientUrl = process.env.CLIENT_URL || 'http://localhost:3020';
   app.use(
     cors({
       origin: [
         clientUrl,
-        'http://localhost:3011',
+        'http://localhost:3020',
         'http://localhost:5173',
         'https://app.1703media.com',
         'https://app-uat.1703media.com',
