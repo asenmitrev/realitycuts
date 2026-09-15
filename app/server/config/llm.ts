@@ -18,14 +18,14 @@ export interface GetLlmOptions {
  */
 export function getLlm(options?: GetLlmOptions) {
   const baseConfig = {
-    model: 'qwen/qwen3.6-27b',
+    model: 'qwen3.8-27b',
     temperature: 0,
     streaming: true,
     apiKey: process.env.OPENAI_API_KEY,
     configuration: {
-      baseURL: LOCAL_LLM_BASE_URL || DEFAULT_LOCAL_LLM_BASE_URL,
-    },
+      baseURL: LOCAL_LLM_BASE_URL || DEFAULT_LOCAL_LLM_BASE_URL
+    }
   };
-  
+
   return new ChatOpenAI(baseConfig);
 }

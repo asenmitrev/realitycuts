@@ -227,6 +227,12 @@ export class LibraryTransferService {
           urls[BROLL_FILE_ROLES[role]] = getS3FileUrl(s3Key);
         }
 
+        if (!urls.thumbnailUrl && urls.thumbnailUrl2) {
+          // Some exports only ever generated the secondary thumbnail — reuse it as the
+          // primary so the library UI (which only reads thumbnailUrl) has something to show.
+          urls.thumbnailUrl = urls.thumbnailUrl2;
+        }
+
         if (Object.keys(urls).length === 0) {
           // Every file for this broll was missing from the ZIP — nothing worth importing.
           processedItems++;

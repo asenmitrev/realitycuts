@@ -74,6 +74,10 @@ services:
       - app/server/.env
     volumes:
       - ./app/server/.vertex-key.json:/app/.vertex-key.json:ro
+    extra_hosts:
+      # Lets the container reach LLM servers (e.g. LM Studio, local Qwen) bound
+      # to the host's localhost via http://host.docker.internal:<port>/v1
+      - "host.docker.internal:host-gateway"
     environment:
       - ENVIRONMENT=local
       - PORT=3021
