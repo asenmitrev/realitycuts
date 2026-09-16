@@ -2,12 +2,13 @@ import mongoose from 'mongoose';
 import './define-getters';
 
 /**
- * Tracks an async library EXPORT or IMPORT (backup) job.
+ * Tracks an async library IMPORT (backup restore) job. (This branch has no EXPORT
+ * feature of its own — `direction` also allows 'EXPORT' only because it's shared with
+ * videoai's job status payload shape; it's never created here.)
  *
- * - EXPORT: builds a ZIP (manifest + all media files + vectors), uploads it to
- *   private S3 and makes it available via presigned URL.
- * - IMPORT: consumes such a ZIP, recreating the library (new IDs, re-uploaded
- *   files, preserved vectors) for the importing user.
+ * IMPORT consumes a manifest.json + one or more part ZIPs (see
+ * shared/types/library-export.ts), recreating the library (new IDs, re-uploaded
+ * files, preserved vectors) for the importing user.
  *
  * Jobs run on BullMQ workers. If the worker process restarts mid-job,
  * `cleanupStaleImportJobs()` (called at boot) fails them and cleans up partial imports.
@@ -55,9 +56,10 @@ const libraryExportJobSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.Mixed,
       default: null
     },
-    // EXPORT: S3 key of the finished ZIP (presigned URL is derived on demand).
-    // IMPORT: S3 key of the temp uploaded ZIP being processed (deleted when the job finishes).
-    zipS3Key: {
+    // S3 prefix the uploaded backup files (manifest.json, part{n}.zip, ...) were stashed
+    // under while the job is processed (deleted, along with everything under it, once
+    // the job finishes — success or failure).
+    importS3Prefix: {
       type: String,
       default: null
     },

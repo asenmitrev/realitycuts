@@ -48,10 +48,11 @@ router.get(
   asyncHandler(libraryController.getTags)
 );
 
-// Restore a library from a backup ZIP (see shared/types/library-export.ts for the format)
+// Restore a library from a backup (manifest.json + one or more part ZIPs uploaded
+// together — see shared/types/library-export.ts for the format)
 router.post(
   '/import',
-  libraryImportUpload.single('file'),
+  libraryImportUpload.array('files'),
   authenticateJWT,
   restrictRoleAccess(['admin', 'editor', 'user']),
   asyncHandler(libraryTransferController.startImport)

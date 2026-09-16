@@ -15,7 +15,6 @@ import {
   getObjectStream,
   uploadPrivateFileToS3,
   uploadReadableToS3,
-  deleteFromS3Promise,
   deleteS3Prefix
 } from './storage/s3';
 import { getS3FileUrl, S3_BUCKET } from '../config/storage';
@@ -24,6 +23,8 @@ import { logger } from './logging';
 import { NotFoundError, BadRequestError, UnauthorizedError } from '../errors';
 import {
   LIBRARY_EXPORT_FORMAT,
+  LIBRARY_EXPORT_PART_FILENAME_REGEX,
+  LIBRARY_EXPORT_LEGACY_PART_FILENAME_REGEX,
   LibraryExportManifest,
   LibraryTransferJobData
 } from 'shared/types/library-export';
@@ -38,41 +39,107 @@ const BROLL_FILE_ROLES = {
 
 type BrollFileRole = keyof typeof BROLL_FILE_ROLES;
 
+/** A file multer already saved to local disk, part of an uploaded backup. */
+type UploadedBackupFile = { path: string; originalName: string };
+
+/**
+ * Match a backup file's original name against the current (0-based, part-{n}.zip) and
+ * legacy (1-based, <name>-export-part{n}.zip) part filename conventions, returning the
+ * part's 0-based index, or null if the name matches neither.
+ */
+function matchPartIndex(originalName: string): number | null {
+  const current = LIBRARY_EXPORT_PART_FILENAME_REGEX.exec(originalName);
+  if (current) return parseInt(current[1], 10);
+
+  const legacy = LIBRARY_EXPORT_LEGACY_PART_FILENAME_REGEX.exec(originalName);
+  if (legacy) return parseInt(legacy[1], 10) - 1;
+
+  return null;
+}
+
 export class LibraryTransferService {
   /**
-   * Stash the uploaded ZIP (already saved to local disk by multer) in MinIO under a
-   * temp key and enqueue a BullMQ job to process it. The temp key — not the local
-   * path — travels with the job, because a BullMQ worker may pick the job up after a
-   * server restart, on a process that never saw the multer-written file.
+   * Stash the uploaded backup (manifest.json + one or more part ZIPs, already saved to
+   * local disk by multer) in MinIO under a temp prefix and enqueue a BullMQ job to
+   * process it. The S3 prefix — not the local paths — travels with the job, because a
+   * BullMQ worker may pick the job up after a server restart, on a process that never
+   * saw the multer-written files.
    */
-  async startImport(zipFilePath: string, originalFileName: string, userId: string): Promise<LibraryTransferJobData> {
+  async startImport(files: UploadedBackupFile[], userId: string): Promise<LibraryTransferJobData> {
+    const cleanupLocalFiles = () => Promise.all(files.map(file => fs.promises.unlink(file.path).catch(() => {})));
+
     const userProfile = await UserProfile.findOne({ firebaseId: userId });
     if (!userProfile) {
-      await fs.promises.unlink(zipFilePath).catch(() => {});
+      await cleanupLocalFiles();
       throw new NotFoundError('User profile not found');
+    }
+
+    const manifestFile = files.find(file => file.originalName.toLowerCase().endsWith('.json'));
+    if (!manifestFile) {
+      await cleanupLocalFiles();
+      throw new BadRequestError('No manifest .json file found in the uploaded backup.');
+    }
+
+    let manifest: LibraryExportManifest;
+    try {
+      const manifestRaw = await fs.promises.readFile(manifestFile.path, 'utf8');
+      manifest = JSON.parse(manifestRaw);
+    } catch {
+      await cleanupLocalFiles();
+      throw new BadRequestError('This is not a valid library export manifest.');
+    }
+    if (manifest.format !== LIBRARY_EXPORT_FORMAT) {
+      await cleanupLocalFiles();
+      throw new BadRequestError('This is not a valid library export manifest.');
+    }
+
+    const partFileByIndex = new Map<number, UploadedBackupFile>();
+    for (const file of files) {
+      if (file === manifestFile) continue;
+      const index = matchPartIndex(file.originalName);
+      if (index !== null) partFileByIndex.set(index, file);
+      // Anything that matches neither the manifest nor a part filename convention is a
+      // stray upload — it's simply left out of partFileByIndex and unlinked below.
+    }
+
+    const totalParts = manifest.stats?.totalParts ?? 0;
+    const missingParts: number[] = [];
+    for (let index = 0; index < totalParts; index++) {
+      if (!partFileByIndex.has(index)) missingParts.push(index + 1);
+    }
+    if (missingParts.length === 1) {
+      await cleanupLocalFiles();
+      throw new BadRequestError(`Missing backup part: ${missingParts[0]}`);
+    }
+    if (missingParts.length > 1) {
+      await cleanupLocalFiles();
+      throw new BadRequestError(`Missing backup parts: ${missingParts.join(', ')}`);
     }
 
     const job = await LibraryExportJob.create({
       direction: 'IMPORT',
       userId,
       status: 'QUEUED',
-      fileName: originalFileName
+      fileName: manifestFile.originalName
     });
 
-    const tempZipKey = `library-imports/${job._id}.zip`;
+    const s3Prefix = `library-imports/${job._id}`;
     try {
-      await uploadPrivateFileToS3(zipFilePath, tempZipKey, 'application/zip');
+      await uploadPrivateFileToS3(manifestFile.path, `${s3Prefix}/manifest.json`, 'application/json');
+      for (const [index, file] of partFileByIndex) {
+        await uploadPrivateFileToS3(file.path, `${s3Prefix}/part${index}.zip`, 'application/zip');
+      }
     } catch (error) {
       await LibraryExportJob.findByIdAndUpdate(job._id, {
         status: 'FAILED',
-        error: 'Failed to store the uploaded backup file.'
+        error: 'Failed to store the uploaded backup files.'
       });
       throw error;
     } finally {
-      await fs.promises.unlink(zipFilePath).catch(() => {});
+      await cleanupLocalFiles();
     }
 
-    job.zipS3Key = tempZipKey;
+    job.importS3Prefix = s3Prefix;
     await job.save();
 
     await enqueueLibraryImportTask({ jobId: job._id!.toString(), version: '1.0.0' });
@@ -107,8 +174,8 @@ export class LibraryTransferService {
         if (job.newLibraryId) {
           await this.cleanupPartialImport(job.newLibraryId.toString(), job.userId);
         }
-        if (job.zipS3Key) {
-          await deleteFromS3Promise(job.zipS3Key).catch(() => {});
+        if (job.importS3Prefix) {
+          await deleteS3Prefix(`${job.importS3Prefix}/`).catch(() => {});
         }
         job.status = 'FAILED';
         job.error = 'Interrupted by a server restart';
@@ -127,24 +194,34 @@ export class LibraryTransferService {
     const job = await LibraryExportJob.findById(jobId);
     if (!job) return;
 
-    const tmpZipPath = path.join(os.tmpdir(), `library-import-${jobId}-${uuidv4()}.zip`);
+    const tmpDir = path.join(os.tmpdir(), `library-import-${jobId}-${uuidv4()}`);
     let newLibrary: InstanceType<typeof Library> | null = null;
-    let openZipfile: ZipFile | null = null;
+    const openParts = new Map<number, { zipfile: ZipFile; entries: Map<string, Entry> }>();
 
     try {
       job.status = 'PROCESSING';
       await job.save();
 
-      if (!job.zipS3Key) {
-        throw new BadRequestError('Import job has no backup file associated with it.');
+      if (!job.importS3Prefix) {
+        throw new BadRequestError('Import job has no backup files associated with it.');
       }
 
-      await this.downloadZipFromS3(job.zipS3Key, tmpZipPath);
-
-      const manifest = await this.readManifestFromZip(tmpZipPath);
+      const manifest = await this.downloadManifestFromS3(`${job.importS3Prefix}/manifest.json`);
       if (manifest.format !== LIBRARY_EXPORT_FORMAT) {
         throw new BadRequestError('This file is not a valid library export.');
       }
+
+      const totalParts = manifest.stats?.totalParts ?? 0;
+      for (let index = 0; index < totalParts; index++) {
+        const partZipPath = path.join(tmpDir, `part${index}.zip`);
+        await this.downloadFileFromS3(`${job.importS3Prefix}/part${index}.zip`, partZipPath);
+        openParts.set(index, await this.readAllEntries(partZipPath));
+      }
+      const getEntry = (fileRef: { part: number; path: string }): { zipfile: ZipFile; entry: Entry } | null => {
+        const part = openParts.get(fileRef.part);
+        const entry = part?.entries.get(fileRef.path);
+        return part && entry ? { zipfile: part.zipfile, entry } : null;
+      };
 
       newLibrary = await Library.create({
         userId: job.userId,
@@ -160,8 +237,6 @@ export class LibraryTransferService {
       job.newLibraryId = newLibrary._id as any;
       await job.save();
 
-      const entryByPath = await this.readAllEntries(tmpZipPath);
-      openZipfile = entryByPath.zipfile;
       const totalItems = manifest.uploads.length + manifest.brolls.length || 1;
       let processedItems = 0;
       const processedFiles: { link: string; prompt: string; status: 'PROCESSED' }[] = [];
@@ -170,14 +245,17 @@ export class LibraryTransferService {
         let url: string | undefined;
         let s3Key: string | undefined;
 
+        // videoai's export never packs raw upload media (upload.file is always null there) —
+        // the branch below only still fires for legacy backups that did include it. Either
+        // way, no `file` here correctly falls through to uploadStatus: 'FAILED' below.
         if (upload.file) {
-          const entry = entryByPath.entries.get(upload.file.path);
-          if (entry) {
+          const found = getEntry(upload.file);
+          if (found) {
             const timestamp = Date.now();
             s3Key = `users/${job.userId}/library/${newLibrary._id}/raw/${timestamp}-${upload.originalName}`;
-            const stream = await this.openEntryStream(entryByPath.zipfile, entry);
+            const stream = await this.openEntryStream(found.zipfile, found.entry);
             await uploadReadableToS3(stream, s3Key, {
-              contentLength: entry.uncompressedSize,
+              contentLength: found.entry.uncompressedSize,
               mimeType: upload.mimeType,
               publicRead: true
             });
@@ -213,14 +291,14 @@ export class LibraryTransferService {
         for (const role of Object.keys(BROLL_FILE_ROLES) as BrollFileRole[]) {
           const fileRef = broll.files[role];
           if (!fileRef) continue;
-          const entry = entryByPath.entries.get(fileRef.path);
-          if (!entry) continue;
+          const found = getEntry(fileRef);
+          if (!found) continue;
 
           const ext = path.extname(fileRef.path) || '';
           const s3Key = `users/${job.userId}/library/${newLibrary._id}/broll/${newBrollId}/${role}${ext}`;
-          const stream = await this.openEntryStream(entryByPath.zipfile, entry);
+          const stream = await this.openEntryStream(found.zipfile, found.entry);
           await uploadReadableToS3(stream, s3Key, {
-            contentLength: entry.uncompressedSize,
+            contentLength: found.entry.uncompressedSize,
             mimeType: fileRef.mimeType,
             publicRead: true
           });
@@ -275,63 +353,31 @@ export class LibraryTransferService {
         error: error instanceof Error ? error.message : 'Import failed'
       });
     } finally {
-      openZipfile?.close();
-      await fs.promises.unlink(tmpZipPath).catch(() => {});
-      if (job.zipS3Key) {
-        await deleteFromS3Promise(job.zipS3Key).catch(() => {});
+      for (const { zipfile } of openParts.values()) zipfile.close();
+      await fs.promises.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
+      if (job.importS3Prefix) {
+        await deleteS3Prefix(`${job.importS3Prefix}/`).catch(() => {});
       }
     }
   }
 
-  private async downloadZipFromS3(s3Key: string, destPath: string): Promise<void> {
+  private async downloadFileFromS3(s3Key: string, destPath: string): Promise<void> {
     const { body } = await getObjectStream(s3Key);
     await fs.promises.mkdir(path.dirname(destPath), { recursive: true });
     await pipeline(body as Readable, fs.createWriteStream(destPath));
   }
 
-  private readManifestFromZip(zipFilePath: string): Promise<LibraryExportManifest> {
-    return new Promise((resolve, reject) => {
-      yauzl.open(zipFilePath, { lazyEntries: true, autoClose: false }, (err, zipfile) => {
-        if (err || !zipfile) return reject(err ?? new BadRequestError('Could not open the uploaded ZIP file.'));
-
-        let found = false;
-        zipfile.on('entry', (entry: Entry) => {
-          if (entry.fileName !== 'manifest.json') {
-            zipfile.readEntry();
-            return;
-          }
-          found = true;
-          zipfile.openReadStream(entry, (streamErr, stream) => {
-            if (streamErr || !stream) {
-              zipfile.close();
-              return reject(streamErr ?? new BadRequestError('Could not read manifest.json'));
-            }
-            const chunks: Buffer[] = [];
-            stream.on('data', chunk => chunks.push(chunk as Buffer));
-            stream.on('end', () => {
-              zipfile.close();
-              try {
-                resolve(JSON.parse(Buffer.concat(chunks).toString('utf8')));
-              } catch (parseErr) {
-                reject(new BadRequestError('manifest.json is not valid JSON.'));
-              }
-            });
-            stream.on('error', streamErr2 => {
-              zipfile.close();
-              reject(streamErr2);
-            });
-          });
-        });
-        zipfile.on('end', () => {
-          if (!found) {
-            zipfile.close();
-            reject(new BadRequestError('This file does not contain a manifest.json — not a valid library export.'));
-          }
-        });
-        zipfile.on('error', reject);
-        zipfile.readEntry();
-      });
-    });
+  private async downloadManifestFromS3(s3Key: string): Promise<LibraryExportManifest> {
+    const { body } = await getObjectStream(s3Key);
+    const chunks: Buffer[] = [];
+    for await (const chunk of body as Readable) {
+      chunks.push(chunk as Buffer);
+    }
+    try {
+      return JSON.parse(Buffer.concat(chunks).toString('utf8'));
+    } catch {
+      throw new BadRequestError('manifest.json is not valid JSON.');
+    }
   }
 
   private readAllEntries(zipFilePath: string): Promise<{ zipfile: ZipFile; entries: Map<string, Entry> }> {

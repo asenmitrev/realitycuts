@@ -5,10 +5,14 @@ import libraryTransferService from '../services/library-transfer.service';
 
 export default {
   startImport: async (req: AuthenticatedRequest, res: Response) => {
-    if (!req.file) {
-      throw new BadRequestError('No backup file provided');
+    const files = req.files as Express.Multer.File[] | undefined;
+    if (!files || files.length === 0) {
+      throw new BadRequestError('No backup files provided');
     }
-    const job = await libraryTransferService.startImport(req.file.path, req.file.originalname, req.user!.user_id);
+    const job = await libraryTransferService.startImport(
+      files.map(file => ({ path: file.path, originalName: file.originalname })),
+      req.user!.user_id
+    );
     res.json(job);
   },
 

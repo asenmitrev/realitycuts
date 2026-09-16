@@ -14,13 +14,17 @@ export const upload = multer({
   })
 });
 
-/** Dedicated instance for library backup ZIP uploads, capped so one upload can't exhaust local disk. */
+/**
+ * Dedicated instance for library backup uploads (manifest.json + one or more part
+ * ZIPs, uploaded together as a multi-file form). Each file is capped individually so
+ * one upload can't exhaust local disk.
+ */
 export const libraryImportUpload = multer({
   storage: multer.diskStorage({
     destination: '/tmp/data',
     filename: (req, file, cb) => {
       const ext = path.extname(file.originalname);
-      const filename = Date.now().toString();
+      const filename = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
       const filename_full = `${filename}${ext}`;
       cb(null, filename_full);
     }
