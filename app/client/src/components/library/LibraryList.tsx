@@ -241,7 +241,8 @@ const LibraryList: React.FC = () => {
               <WalkthroughButton walkthroughType="libraryList" isSample={shouldAutoStart} />
               <input
                 type="file"
-                accept=".zip"
+                accept=".zip,.json"
+                multiple
                 ref={fileInputRef}
                 onChange={handleFileChange}
                 hidden

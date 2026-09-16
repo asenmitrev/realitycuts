@@ -36,12 +36,12 @@ export const useLibraryImport = () => {
     [apiService]
   );
 
-  const importFile = useCallback(
-    async (file: File) => {
+  const importFiles = useCallback(
+    async (files: File[]) => {
       try {
         setIsImporting(true);
         const formData = new FormData();
-        formData.append('file', file);
+        files.forEach(file => formData.append('files', file));
         const job = await apiService.post<LibraryTransferJobData, FormData>('/api/library/import', formData);
         const finishedJob = await pollTransferJob(job._id);
         toast({
@@ -70,22 +70,25 @@ export const useLibraryImport = () => {
 
   const handleFileChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
-      const file = event.target.files?.[0];
-      // Reset so selecting the same file again still fires onChange
+      const files = Array.from(event.target.files ?? []);
+      // Reset so selecting the same files again still fires onChange
       event.target.value = '';
-      if (!file) return;
-      if (!file.name.toLowerCase().endsWith('.zip')) {
+      if (files.length === 0) return;
+
+      const hasManifest = files.some(file => file.name.toLowerCase().endsWith('.json'));
+      const hasPart = files.some(file => file.name.toLowerCase().endsWith('.zip'));
+      if (!hasManifest || !hasPart) {
         toast({
           status: 'error',
-          title: 'Invalid File',
-          description: 'Please select a .zip library export file.',
+          title: 'Invalid Selection',
+          description: 'Select the backup’s manifest.json together with its part-*.zip files.',
           duration: 5000
         });
         return;
       }
-      importFile(file);
+      importFiles(files);
     },
-    [importFile, toast]
+    [importFiles, toast]
   );
 
   const openFilePicker = useCallback(() => {
