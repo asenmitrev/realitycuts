@@ -40,9 +40,15 @@ const libraryExportJobSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['QUEUED', 'PROCESSING', 'COMPLETED', 'FAILED'],
-      default: 'QUEUED',
+      enum: ['AWAITING_UPLOAD', 'QUEUED', 'PROCESSING', 'COMPLETED', 'FAILED'],
+      default: 'AWAITING_UPLOAD',
       index: true
+    },
+    // IMPORT only: number of part ZIPs the client is expected to upload before
+    // finalize() enqueues the job. Set at /import/init time from the manifest.
+    expectedParts: {
+      type: Number,
+      default: 0
     },
     error: {
       type: String,

@@ -4,7 +4,7 @@ services:
   redis:
     image: redis:7-alpine
     volumes:
-      - redis-data:/data
+      - ./data/redis:/data
     ports:
       - "6379:6379"
     healthcheck:
@@ -17,7 +17,7 @@ services:
     image: quay.io/minio/minio:latest
     command: server /data --console-address ":9001"
     volumes:
-      - minio-data:/data
+      - ./data/minio:/data
     environment:
       MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
@@ -48,6 +48,15 @@ services:
     # single-node replica set; it replaces plain mongo:7 since search can't
     # be bolted on as a second container without converting mongo:7 to a
     # replica set with keyfile auth for a separate mongot to attach to.
+    #
+    # These stay on regular Docker-managed volumes (not ./data bind mounts): the
+    # replica set's internal auth keyfile under /data/configdb requires real Unix
+    # permission bits (0600), which a non-POSIX host filesystem (NTFS/exFAT/network
+    # shares) cannot enforce even via chmod, so mongod fails to start with "Unable to
+    # acquire security key[s]" if this directory is bind-mounted onto one. Mongo only
+    # holds metadata + vector embeddings here (not the actual video files), so its
+    # footprint is small — the multi-gigabyte data (MinIO, server /tmp) is what
+    # actually needed to move off the OS disk, and those have no such requirement.
     image: mongodb/mongodb-atlas-local:7.0.34
     hostname: mongo
     volumes:
@@ -74,6 +83,11 @@ services:
       - app/server/.env
     volumes:
       - ./app/server/.vertex-key.json:/app/.vertex-key.json:ro
+      # The server writes all of its scratch/temp files under /tmp (library import
+      # staging, video/TTS/export processing, etc). Bind-mounting it here keeps that
+      # data on this disk/directory instead of Docker's own storage location, which
+      # is what actually overloads the OS disk on multi-gigabyte library imports.
+      - ./data/server-tmp:/tmp
     extra_hosts:
       # Lets the container reach LLM servers (e.g. LM Studio, local Qwen) bound
       # to the host's localhost via http://host.docker.internal:<port>/v1
@@ -109,9 +123,14 @@ services:
     depends_on:
       - server
 
+# Redis, MinIO, and the server's /tmp scratch space are bind-mounted under ./data
+# (see the volumes: entries above) so the multi-gigabyte data lives on whatever disk
+# this checkout is on, rather than under Docker's own storage root (typically
+# /var/lib/docker, usually on the OS/home disk). ./data is gitignored.
+#
+# Mongo's volumes below stay Docker-managed on purpose — see the comment on the mongo
+# service.
 volumes:
-  redis-data:
-  minio-data:
   videoai-mongo:
   videoai-mongo-configdb:
   videoai-mongo-search:

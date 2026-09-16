@@ -13,9 +13,11 @@ import { LibraryExportJob } from '../models/library-export-job';
 import { UserProfile } from '../models/user-profile';
 import {
   getObjectStream,
-  uploadPrivateFileToS3,
+  putPrivateObjectString,
   uploadReadableToS3,
-  deleteS3Prefix
+  deleteS3Prefix,
+  generatePresignedUploadUrl,
+  verifyS3Upload
 } from './storage/s3';
 import { getS3FileUrl, S3_BUCKET } from '../config/storage';
 import { enqueueLibraryImportTask } from './task-queue';
@@ -23,9 +25,8 @@ import { logger } from './logging';
 import { NotFoundError, BadRequestError, UnauthorizedError } from '../errors';
 import {
   LIBRARY_EXPORT_FORMAT,
-  LIBRARY_EXPORT_PART_FILENAME_REGEX,
-  LIBRARY_EXPORT_LEGACY_PART_FILENAME_REGEX,
   LibraryExportManifest,
+  LibraryImportInitResponse,
   LibraryTransferJobData
 } from 'shared/types/library-export';
 
@@ -39,107 +40,88 @@ const BROLL_FILE_ROLES = {
 
 type BrollFileRole = keyof typeof BROLL_FILE_ROLES;
 
-/** A file multer already saved to local disk, part of an uploaded backup. */
-type UploadedBackupFile = { path: string; originalName: string };
-
-/**
- * Match a backup file's original name against the current (0-based, part-{n}.zip) and
- * legacy (1-based, <name>-export-part{n}.zip) part filename conventions, returning the
- * part's 0-based index, or null if the name matches neither.
- */
-function matchPartIndex(originalName: string): number | null {
-  const current = LIBRARY_EXPORT_PART_FILENAME_REGEX.exec(originalName);
-  if (current) return parseInt(current[1], 10);
-
-  const legacy = LIBRARY_EXPORT_LEGACY_PART_FILENAME_REGEX.exec(originalName);
-  if (legacy) return parseInt(legacy[1], 10) - 1;
-
-  return null;
-}
+/** How long a part's presigned upload URL stays valid — generous for large files on slow links. */
+const PART_UPLOAD_URL_EXPIRY_SECONDS = 6 * 60 * 60;
 
 export class LibraryTransferService {
   /**
-   * Stash the uploaded backup (manifest.json + one or more part ZIPs, already saved to
-   * local disk by multer) in MinIO under a temp prefix and enqueue a BullMQ job to
-   * process it. The S3 prefix — not the local paths — travels with the job, because a
-   * BullMQ worker may pick the job up after a server restart, on a process that never
-   * saw the multer-written files.
+   * Step 1 of importing a backup: the manifest (small JSON, metadata + vectors only)
+   * is sent first, on its own — never a multi-file form bundling the multi-gigabyte
+   * ZIP parts. It's written straight to storage from memory, and a presigned PUT URL
+   * is minted for every part ZIP the manifest declares. The client then uploads each
+   * part directly to storage, one at a time, via those URLs — the part bytes never
+   * pass through this server (no local disk, no full-request buffering) — and finally
+   * calls finalizeImport() once they've all landed.
    */
-  async startImport(files: UploadedBackupFile[], userId: string): Promise<LibraryTransferJobData> {
-    const cleanupLocalFiles = () => Promise.all(files.map(file => fs.promises.unlink(file.path).catch(() => {})));
-
+  async initImport(manifest: LibraryExportManifest, userId: string): Promise<LibraryImportInitResponse> {
     const userProfile = await UserProfile.findOne({ firebaseId: userId });
     if (!userProfile) {
-      await cleanupLocalFiles();
       throw new NotFoundError('User profile not found');
     }
 
-    const manifestFile = files.find(file => file.originalName.toLowerCase().endsWith('.json'));
-    if (!manifestFile) {
-      await cleanupLocalFiles();
-      throw new BadRequestError('No manifest .json file found in the uploaded backup.');
-    }
-
-    let manifest: LibraryExportManifest;
-    try {
-      const manifestRaw = await fs.promises.readFile(manifestFile.path, 'utf8');
-      manifest = JSON.parse(manifestRaw);
-    } catch {
-      await cleanupLocalFiles();
+    if (!manifest || manifest.format !== LIBRARY_EXPORT_FORMAT) {
       throw new BadRequestError('This is not a valid library export manifest.');
-    }
-    if (manifest.format !== LIBRARY_EXPORT_FORMAT) {
-      await cleanupLocalFiles();
-      throw new BadRequestError('This is not a valid library export manifest.');
-    }
-
-    const partFileByIndex = new Map<number, UploadedBackupFile>();
-    for (const file of files) {
-      if (file === manifestFile) continue;
-      const index = matchPartIndex(file.originalName);
-      if (index !== null) partFileByIndex.set(index, file);
-      // Anything that matches neither the manifest nor a part filename convention is a
-      // stray upload — it's simply left out of partFileByIndex and unlinked below.
     }
 
     const totalParts = manifest.stats?.totalParts ?? 0;
-    const missingParts: number[] = [];
-    for (let index = 0; index < totalParts; index++) {
-      if (!partFileByIndex.has(index)) missingParts.push(index + 1);
-    }
-    if (missingParts.length === 1) {
-      await cleanupLocalFiles();
-      throw new BadRequestError(`Missing backup part: ${missingParts[0]}`);
-    }
-    if (missingParts.length > 1) {
-      await cleanupLocalFiles();
-      throw new BadRequestError(`Missing backup parts: ${missingParts.join(', ')}`);
-    }
 
     const job = await LibraryExportJob.create({
       direction: 'IMPORT',
       userId,
-      status: 'QUEUED',
-      fileName: manifestFile.originalName
+      status: 'AWAITING_UPLOAD',
+      expectedParts: totalParts,
+      fileName: manifest.library?.title ? `${manifest.library.title}.json` : 'manifest.json'
     });
 
     const s3Prefix = `library-imports/${job._id}`;
-    try {
-      await uploadPrivateFileToS3(manifestFile.path, `${s3Prefix}/manifest.json`, 'application/json');
-      for (const [index, file] of partFileByIndex) {
-        await uploadPrivateFileToS3(file.path, `${s3Prefix}/part${index}.zip`, 'application/zip');
-      }
-    } catch (error) {
-      await LibraryExportJob.findByIdAndUpdate(job._id, {
-        status: 'FAILED',
-        error: 'Failed to store the uploaded backup files.'
-      });
-      throw error;
-    } finally {
-      await cleanupLocalFiles();
-    }
+    await putPrivateObjectString(`${s3Prefix}/manifest.json`, JSON.stringify(manifest), 'application/json');
 
     job.importS3Prefix = s3Prefix;
+    await job.save();
+
+    const partUploadUrls = await Promise.all(
+      Array.from({ length: totalParts }, (_, index) =>
+        generatePresignedUploadUrl(`${s3Prefix}/part${index}.zip`, 'application/zip', PART_UPLOAD_URL_EXPIRY_SECONDS)
+      )
+    );
+
+    return { jobId: job._id!.toString(), partUploadUrls };
+  }
+
+  /**
+   * Step 2: called once the client has PUT every part ZIP directly to storage. Verifies
+   * they're all actually there (re-callable — a retry after uploading missing parts
+   * works fine, since the job just stays AWAITING_UPLOAD until this succeeds), then
+   * enqueues the BullMQ job that does the real processing.
+   */
+  async finalizeImport(jobId: string, userId: string): Promise<LibraryTransferJobData> {
+    const job = await LibraryExportJob.findById(jobId);
+    if (!job) {
+      throw new NotFoundError('Transfer job not found');
+    }
+    if (job.userId !== userId) {
+      throw new UnauthorizedError('You do not have permission to access this job');
+    }
+    if (job.status !== 'AWAITING_UPLOAD') {
+      throw new BadRequestError(`This import is not awaiting upload (status: ${job.status}).`);
+    }
+    if (!job.importS3Prefix) {
+      throw new BadRequestError('Import job has no backup files associated with it.');
+    }
+
+    const missingParts: number[] = [];
+    for (let index = 0; index < (job.expectedParts ?? 0); index++) {
+      const verification = await verifyS3Upload(`${job.importS3Prefix}/part${index}.zip`);
+      if (!verification.exists) missingParts.push(index + 1);
+    }
+    if (missingParts.length === 1) {
+      throw new BadRequestError(`Missing backup part: ${missingParts[0]}`);
+    }
+    if (missingParts.length > 1) {
+      throw new BadRequestError(`Missing backup parts: ${missingParts.join(', ')}`);
+    }
+
+    job.status = 'QUEUED';
     await job.save();
 
     await enqueueLibraryImportTask({ jobId: job._id!.toString(), version: '1.0.0' });

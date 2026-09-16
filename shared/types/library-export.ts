@@ -138,7 +138,12 @@ export type LibraryTransferJobData = {
   sourceLibraryId?: string | null;
   /** Import: the newly created library (set as soon as it exists). */
   newLibraryId?: string | null;
-  status: 'QUEUED' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+  /**
+   * IMPORT only: 'AWAITING_UPLOAD' is the initial state, between /import/init and
+   * /import/:jobId/finalize, while the client is PUTting part ZIPs directly to
+   * storage one at a time.
+   */
+  status: 'AWAITING_UPLOAD' | 'QUEUED' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
   error?: string | null;
   /** 0..1 */
   progress: number;
@@ -148,4 +153,20 @@ export type LibraryTransferJobData = {
   fileName?: string | null;
   createdAt?: string;
   updatedAt?: string;
+};
+
+/** Body of POST /api/library/import/init — the manifest is sent first, on its own. */
+export type LibraryImportInitRequest = {
+  manifest: LibraryExportManifest;
+};
+
+/**
+ * Response to POST /api/library/import/init: a job id plus one presigned PUT URL per
+ * part, index-aligned (partUploadUrls[i] uploads part{i}.zip). The client PUTs each
+ * part directly to storage, one at a time, then calls POST /import/:jobId/finalize.
+ * Nothing but the small manifest.json ever passes through the app server itself.
+ */
+export type LibraryImportInitResponse = {
+  jobId: string;
+  partUploadUrls: string[];
 };

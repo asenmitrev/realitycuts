@@ -1,23 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import fs from 'fs';
 import { LibraryTransferService } from '../library-transfer.service';
 import { UserProfile } from '../../models/user-profile';
 import { LibraryExportJob } from '../../models/library-export-job';
-import { uploadPrivateFileToS3 } from '../storage/s3';
+import { putPrivateObjectString, generatePresignedUploadUrl, verifyS3Upload } from '../storage/s3';
 import { enqueueLibraryImportTask } from '../task-queue';
 import { LIBRARY_EXPORT_FORMAT, LIBRARY_EXPORT_VERSION } from 'shared/types/library-export';
-
-vi.mock('fs', () => ({
-  default: {
-    promises: {
-      readFile: vi.fn(),
-      unlink: vi.fn().mockResolvedValue(undefined),
-      mkdir: vi.fn().mockResolvedValue(undefined),
-      rm: vi.fn().mockResolvedValue(undefined)
-    },
-    createWriteStream: vi.fn()
-  }
-}));
 
 vi.mock('../../models/user-profile', () => ({
   UserProfile: { findOne: vi.fn() }
@@ -40,9 +27,11 @@ vi.mock('../../models/broll-video-metadata', () => ({
 
 vi.mock('../storage/s3', () => ({
   getObjectStream: vi.fn(),
-  uploadPrivateFileToS3: vi.fn().mockResolvedValue(undefined),
+  putPrivateObjectString: vi.fn().mockResolvedValue(undefined),
   uploadReadableToS3: vi.fn(),
-  deleteS3Prefix: vi.fn().mockResolvedValue(0)
+  deleteS3Prefix: vi.fn().mockResolvedValue(0),
+  generatePresignedUploadUrl: vi.fn().mockImplementation(async (key: string) => `https://minio.local/${key}?signed=1`),
+  verifyS3Upload: vi.fn().mockResolvedValue({ exists: true })
 }));
 
 vi.mock('../task-queue', () => ({
@@ -53,7 +42,7 @@ vi.mock('../logging', () => ({
   logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() }
 }));
 
-describe('LibraryTransferService.startImport', () => {
+describe('LibraryTransferService', () => {
   const service = new LibraryTransferService();
   const userId = 'user-123';
 
@@ -66,27 +55,11 @@ describe('LibraryTransferService.startImport', () => {
     uploads: [],
     brolls: [],
     stats: { brollCount: 0, uploadCount: 0, fileCount: 0, totalMediaBytes: 0, missingFiles: [], totalParts: 2 }
-  };
-
-  const manifestFile = (originalName = 'manifest.json') => ({
-    path: `/tmp/data/${originalName}`,
-    originalName
-  });
-  // Current videoai export convention: part-0.zip, part-1.zip, ... (0-based).
-  const partFile = (n: number) => ({
-    path: `/tmp/data/part-${n}.zip`,
-    originalName: `part-${n}.zip`
-  });
-  // Previous (pre-chunked, single-outer-ZIP) videoai export convention: 1-based.
-  const legacyPartFile = (n: number) => ({
-    path: `/tmp/data/my-library-export-part${n}.zip`,
-    originalName: `my-library-export-part${n}.zip`
-  });
+  } as any;
 
   beforeEach(() => {
     vi.clearAllMocks();
     (UserProfile.findOne as any).mockResolvedValue({ firebaseId: userId });
-    (fs.promises.readFile as any).mockResolvedValue(JSON.stringify(baseManifest));
     (LibraryExportJob.create as any).mockImplementation(async (doc: any) => ({
       ...doc,
       _id: 'job-1',
@@ -94,76 +67,96 @@ describe('LibraryTransferService.startImport', () => {
     }));
   });
 
-  it('rejects when the manifest is missing', async () => {
-    const files = [partFile(0), partFile(1)];
+  describe('initImport', () => {
+    it('rejects a manifest whose format does not match the library export contract', async () => {
+      await expect(service.initImport({ ...baseManifest, format: 'something-else' }, userId)).rejects.toThrow(
+        'This is not a valid library export manifest.'
+      );
+      expect(LibraryExportJob.create).not.toHaveBeenCalled();
+    });
 
-    await expect(service.startImport(files, userId)).rejects.toThrow(
-      'No manifest .json file found in the uploaded backup.'
-    );
-    expect(LibraryExportJob.create).not.toHaveBeenCalled();
-    // Every uploaded file gets cleaned up even though nothing was a valid manifest.
-    expect(fs.promises.unlink).toHaveBeenCalledWith(files[0].path);
-    expect(fs.promises.unlink).toHaveBeenCalledWith(files[1].path);
+    it('creates an AWAITING_UPLOAD job, stores the manifest, and returns one presigned URL per part', async () => {
+      const result = await service.initImport(baseManifest, userId);
+
+      expect(LibraryExportJob.create).toHaveBeenCalledWith(
+        expect.objectContaining({ direction: 'IMPORT', status: 'AWAITING_UPLOAD', expectedParts: 2 })
+      );
+      expect(putPrivateObjectString).toHaveBeenCalledWith(
+        'library-imports/job-1/manifest.json',
+        JSON.stringify(baseManifest),
+        'application/json'
+      );
+      expect(generatePresignedUploadUrl).toHaveBeenCalledWith(
+        'library-imports/job-1/part0.zip',
+        'application/zip',
+        expect.any(Number)
+      );
+      expect(generatePresignedUploadUrl).toHaveBeenCalledWith(
+        'library-imports/job-1/part1.zip',
+        'application/zip',
+        expect.any(Number)
+      );
+      expect(result).toEqual({
+        jobId: 'job-1',
+        partUploadUrls: [
+          'https://minio.local/library-imports/job-1/part0.zip?signed=1',
+          'https://minio.local/library-imports/job-1/part1.zip?signed=1'
+        ]
+      });
+    });
+
+    it('returns no part URLs when the manifest declares zero parts', async () => {
+      const result = await service.initImport({ ...baseManifest, stats: { ...baseManifest.stats, totalParts: 0 } }, userId);
+      expect(result.partUploadUrls).toEqual([]);
+      expect(generatePresignedUploadUrl).not.toHaveBeenCalled();
+    });
   });
 
-  it('rejects when a declared part is missing, listing the missing 1-based part number', async () => {
-    const files = [manifestFile(), partFile(0)]; // manifest declares totalParts: 2, part-1.zip absent
+  describe('finalizeImport', () => {
+    const awaitingUploadJob = () => ({
+      _id: 'job-1',
+      userId,
+      status: 'AWAITING_UPLOAD',
+      expectedParts: 2,
+      importS3Prefix: 'library-imports/job-1',
+      save: vi.fn().mockResolvedValue(undefined)
+    });
 
-    await expect(service.startImport(files, userId)).rejects.toThrow('Missing backup part: 2');
-    expect(LibraryExportJob.create).not.toHaveBeenCalled();
-    expect(uploadPrivateFileToS3).not.toHaveBeenCalled();
-  });
+    it('rejects when the job is not awaiting upload', async () => {
+      (LibraryExportJob.findById as any).mockResolvedValue({ ...awaitingUploadJob(), status: 'PROCESSING' });
 
-  it('lists every missing part when more than one is absent', async () => {
-    const manifest = { ...baseManifest, stats: { ...baseManifest.stats, totalParts: 4 } };
-    (fs.promises.readFile as any).mockResolvedValue(JSON.stringify(manifest));
-    const files = [manifestFile(), partFile(1)]; // parts 0, 2, 3 absent -> displayed as 1, 3, 4
+      await expect(service.finalizeImport('job-1', userId)).rejects.toThrow('not awaiting upload');
+      expect(enqueueLibraryImportTask).not.toHaveBeenCalled();
+    });
 
-    await expect(service.startImport(files, userId)).rejects.toThrow('Missing backup parts: 1, 3, 4');
-  });
+    it('rejects when a part is missing, listing its 1-based number', async () => {
+      (LibraryExportJob.findById as any).mockResolvedValue(awaitingUploadJob());
+      (verifyS3Upload as any).mockImplementation(async (key: string) =>
+        key.endsWith('part1.zip') ? { exists: false } : { exists: true }
+      );
 
-  it('matches current part-{n}.zip (0-based) filenames regardless of upload order and uploads each to its 0-based key', async () => {
-    // Parts arrive out of order, plus an unrelated stray file that should just be discarded.
-    const files = [partFile(1), manifestFile(), partFile(0), { path: '/tmp/data/readme.txt', originalName: 'readme.txt' }];
+      await expect(service.finalizeImport('job-1', userId)).rejects.toThrow('Missing backup part: 2');
+      expect(enqueueLibraryImportTask).not.toHaveBeenCalled();
+    });
 
-    const job = await service.startImport(files, userId);
+    it('lists every missing part when more than one is absent', async () => {
+      (LibraryExportJob.findById as any).mockResolvedValue({ ...awaitingUploadJob(), expectedParts: 3 });
+      (verifyS3Upload as any).mockResolvedValue({ exists: false });
 
-    expect(job._id).toBe('job-1');
-    expect(uploadPrivateFileToS3).toHaveBeenCalledWith(
-      manifestFile().path,
-      'library-imports/job-1/manifest.json',
-      'application/json'
-    );
-    expect(uploadPrivateFileToS3).toHaveBeenCalledWith(partFile(0).path, 'library-imports/job-1/part0.zip', 'application/zip');
-    expect(uploadPrivateFileToS3).toHaveBeenCalledWith(partFile(1).path, 'library-imports/job-1/part1.zip', 'application/zip');
-    expect(fs.promises.unlink).toHaveBeenCalledWith('/tmp/data/readme.txt');
-    expect(enqueueLibraryImportTask).toHaveBeenCalledWith({ jobId: 'job-1', version: '1.0.0' });
-  });
+      await expect(service.finalizeImport('job-1', userId)).rejects.toThrow('Missing backup parts: 1, 2, 3');
+    });
 
-  it('still matches legacy <name>-export-part{n}.zip (1-based) filenames from pre-rewrite backups', async () => {
-    const files = [legacyPartFile(2), manifestFile(), legacyPartFile(1)];
+    it('marks the job QUEUED and enqueues the import task once every part is present', async () => {
+      const job = awaitingUploadJob();
+      (LibraryExportJob.findById as any).mockResolvedValue(job);
+      (verifyS3Upload as any).mockResolvedValue({ exists: true });
 
-    const job = await service.startImport(files, userId);
+      const result = await service.finalizeImport('job-1', userId);
 
-    expect(job._id).toBe('job-1');
-    // legacyPartFile(1) (1-based) -> index 0, legacyPartFile(2) -> index 1
-    expect(uploadPrivateFileToS3).toHaveBeenCalledWith(
-      legacyPartFile(1).path,
-      'library-imports/job-1/part0.zip',
-      'application/zip'
-    );
-    expect(uploadPrivateFileToS3).toHaveBeenCalledWith(
-      legacyPartFile(2).path,
-      'library-imports/job-1/part1.zip',
-      'application/zip'
-    );
-    expect(enqueueLibraryImportTask).toHaveBeenCalledWith({ jobId: 'job-1', version: '1.0.0' });
-  });
-
-  it('rejects a manifest whose format does not match the library export contract', async () => {
-    (fs.promises.readFile as any).mockResolvedValue(JSON.stringify({ ...baseManifest, format: 'something-else' }));
-    const files = [manifestFile(), partFile(0), partFile(1)];
-
-    await expect(service.startImport(files, userId)).rejects.toThrow('This is not a valid library export manifest.');
+      expect(job.status).toBe('QUEUED');
+      expect(job.save).toHaveBeenCalled();
+      expect(enqueueLibraryImportTask).toHaveBeenCalledWith({ jobId: 'job-1', version: '1.0.0' });
+      expect(result.status).toBe('QUEUED');
+    });
   });
 });

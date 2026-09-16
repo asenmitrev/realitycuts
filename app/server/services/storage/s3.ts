@@ -410,6 +410,26 @@ export async function getObjectStream(
 }
 
 /**
+ * Upload a string directly to S3/MinIO without the public-read ACL. Used for small
+ * system-internal objects (e.g. a library import manifest.json) written straight from
+ * memory, with no local temp file involved.
+ */
+export async function putPrivateObjectString(
+  key: string,
+  body: string,
+  contentType: string = 'application/json'
+): Promise<void> {
+  await s3.send(
+    new PutObjectCommand({
+      Bucket: S3_BUCKET,
+      Key: key,
+      Body: body,
+      ContentType: contentType
+    })
+  );
+}
+
+/**
  * Upload a local file to S3/MinIO without the public-read ACL. Used for system-internal
  * temp objects (e.g. an uploaded library backup ZIP awaiting processing) that aren't
  * user media and shouldn't be tracked as one in S3Upload.

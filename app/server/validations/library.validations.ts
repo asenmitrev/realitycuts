@@ -28,6 +28,18 @@ export const jobIdParamSchema = z.object({
 });
 
 // Body schemas
+// Only the shape /import/init actually reads is checked — the manifest itself is a
+// large, independently-versioned document (see shared/types/library-export.ts) and is
+// validated more strictly by libraryTransferService.initImport.
+export const importInitBodySchema = z.object({
+  manifest: z
+    .object({
+      format: z.string(),
+      stats: z.object({ totalParts: z.number().int().nonnegative() }).passthrough().optional()
+    })
+    .passthrough()
+});
+
 export const createLibraryBodySchema = z.object({}).passthrough(); // Allow any body for library creation
 
 export const processLibraryBodySchema = z.object({

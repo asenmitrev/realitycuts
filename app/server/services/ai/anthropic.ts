@@ -57,7 +57,7 @@ function convertMessages(anthropicMessages: Anthropic.MessageParam[]): (HumanMes
   return result;
 }
 
-const llm = getLlm({ disableThinking: true });
+const llm = getLlm();
 
 export const createClaudeVisionCheapCompletion = async (messages: Anthropic.MessageParam[]): Promise<string> => {
   const operation = retry.operation({

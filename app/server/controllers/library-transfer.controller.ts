@@ -2,17 +2,20 @@ import { Response } from 'express';
 import { AuthenticatedRequest } from '../types';
 import { BadRequestError } from '../errors';
 import libraryTransferService from '../services/library-transfer.service';
+import { LibraryImportInitRequest } from 'shared/types/library-export';
 
 export default {
-  startImport: async (req: AuthenticatedRequest, res: Response) => {
-    const files = req.files as Express.Multer.File[] | undefined;
-    if (!files || files.length === 0) {
-      throw new BadRequestError('No backup files provided');
+  initImport: async (req: AuthenticatedRequest, res: Response) => {
+    const { manifest } = req.body as LibraryImportInitRequest;
+    if (!manifest) {
+      throw new BadRequestError('manifest is required');
     }
-    const job = await libraryTransferService.startImport(
-      files.map(file => ({ path: file.path, originalName: file.originalname })),
-      req.user!.user_id
-    );
+    const result = await libraryTransferService.initImport(manifest, req.user!.user_id);
+    res.json(result);
+  },
+
+  finalizeImport: async (req: AuthenticatedRequest, res: Response) => {
+    const job = await libraryTransferService.finalizeImport(req.params.jobId, req.user!.user_id);
     res.json(job);
   },
 

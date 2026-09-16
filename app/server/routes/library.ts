@@ -1,7 +1,7 @@
 import express from 'express';
 import { authenticateJWT } from '../middleware/auth-middleware';
 import { restrictRoleAccess } from '../middleware/role-access-middleware';
-import { upload, libraryImportUpload } from '../middleware/multer';
+import { upload } from '../middleware/multer';
 import { configureDotenv } from '../config/dotenv';
 import { asyncHandler } from '../utils/async-handler';
 import { validateRequest } from '../middleware/validate-request';
@@ -21,7 +21,8 @@ import {
   generateUploadUrlBodySchema,
   updateLibraryBodySchema,
   deleteBrollBulkBodySchema,
-  getLibrariesByIdsBodySchema
+  getLibrariesByIdsBodySchema,
+  importInitBodySchema
 } from '../validations/library.validations';
 import { connectMongo } from '../models/connect';
 
@@ -48,14 +49,25 @@ router.get(
   asyncHandler(libraryController.getTags)
 );
 
-// Restore a library from a backup (manifest.json + one or more part ZIPs uploaded
-// together — see shared/types/library-export.ts for the format)
+// Restore a library from a backup (manifest.json + one or more part ZIPs — see
+// shared/types/library-export.ts for the format). The manifest is sent here first;
+// the part ZIPs are then PUT directly to storage one at a time via the presigned
+// URLs this returns, then /import/:jobId/finalize kicks off processing. This keeps
+// multi-gigabyte backups off the app server's own disk entirely.
 router.post(
-  '/import',
-  libraryImportUpload.array('files'),
+  '/import/init',
   authenticateJWT,
   restrictRoleAccess(['admin', 'editor', 'user']),
-  asyncHandler(libraryTransferController.startImport)
+  validateRequest({ body: importInitBodySchema }),
+  asyncHandler(libraryTransferController.initImport)
+);
+
+router.post(
+  '/import/:jobId/finalize',
+  authenticateJWT,
+  restrictRoleAccess(['admin', 'editor', 'user']),
+  validateRequest({ params: jobIdParamSchema }),
+  asyncHandler(libraryTransferController.finalizeImport)
 );
 
 router.get(

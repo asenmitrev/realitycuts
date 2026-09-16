@@ -45,6 +45,12 @@ export function createApp() {
   // Chat uses Server-Sent Events which must not be buffered
   app.use('/api/chat', bodyParser.json(), chatRoutes);
 
+  // Library import's manifest.json carries the full broll metadata for the backup,
+  // INCLUDING every clip's vector embedding — it can run well past the general 100mb
+  // JSON limit for a library with a few thousand brolls, so it gets its own, much
+  // higher limit here (ahead of the general parser below, same pattern as /api/chat).
+  app.use('/api/library/import/init', bodyParser.json({ limit: '2gb' }));
+
   // Configure compression for all other routes
   app.use(compression() as unknown as RequestHandler);
   app.use(

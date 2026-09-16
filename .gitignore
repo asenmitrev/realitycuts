@@ -20,6 +20,7 @@ data/
 .env
 .env.*
 !.env.example
+# Regenerated from node_modules/libass-wasm by app/client's dev/build scripts
 **/subtitles-octopus-worker.js
 .cloc
 functions/venvs/

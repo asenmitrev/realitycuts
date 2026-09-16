@@ -180,7 +180,7 @@ const LibraryList: React.FC = () => {
   const userId = useUserId();
   const [tabIndex, setTabIndex] = useState(0);
   const [shouldAutoStart] = useState(false);
-  const { isImporting, fileInputRef, openFilePicker, handleFileChange } = useLibraryImport();
+  const { isImporting, importProgress, fileInputRef, openFilePicker, handleFileChange } = useLibraryImport();
 
   // Personal libraries query
   const { data: libraries, isLoading } = useQuery(
@@ -254,7 +254,7 @@ const LibraryList: React.FC = () => {
                 colorScheme="white"
                 onClick={openFilePicker}
                 isLoading={isImporting}
-                loadingText="Importing"
+                loadingText={importProgress ?? 'Importing'}
               >
                 Import Library
               </Button>
