@@ -70,6 +70,13 @@ services:
       - "27017:27017"
     # Image ships its own HEALTHCHECK covering mongod + mongot readiness;
     # do not override it here.
+    # The image's own PID 1 ("runner") occasionally panics on a slow/flaky mongot
+    # liveness ping ("error checking mongot: ... connection refused") and exits — this
+    # has been observed on local Docker Desktop even with the container barely using any
+    # memory, so it isn't resource pressure. There's no supervisor around PID 1 to retry,
+    # so without a restart policy one flaky ping permanently kills the DB until someone
+    # notices and runs `docker compose up -d mongo` again.
+    restart: unless-stopped
 
   server:
     build:
