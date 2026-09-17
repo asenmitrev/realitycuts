@@ -225,6 +225,24 @@ async function getYouTubeUploadHandler() {
 }
 
 // ---------------------------------------------------------------------------
+// Library clustering handler
+// ---------------------------------------------------------------------------
+
+let processLibraryClusteringTask:
+	| ((data: JobPayloadMap["library-clustering"]) => Promise<void>)
+	| null = null;
+
+async function getLibraryClusteringHandler() {
+	if (!processLibraryClusteringTask) {
+		const { processLibraryClusteringTask: handler } = await import(
+			"./library-clustering-processor.js"
+		);
+		processLibraryClusteringTask = handler;
+	}
+	return processLibraryClusteringTask;
+}
+
+// ---------------------------------------------------------------------------
 // Automation checker handler
 // ---------------------------------------------------------------------------
 
@@ -321,6 +339,11 @@ const HANDLERS: Partial<
 		const handler = await getYouTubeUploadHandler();
 		if (!handler) throw new Error("YouTube upload handler not available");
 		return handler(payload as JobPayloadMap["youtube-upload"]);
+	},
+	"library-clustering": async (payload) => {
+		const handler = await getLibraryClusteringHandler();
+		if (!handler) throw new Error("Library clustering handler not available");
+		return handler(payload as JobPayloadMap["library-clustering"]);
 	},
 };
 

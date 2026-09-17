@@ -1,6 +1,6 @@
 import libraryRepository from '../repositories/library.repository';
 import { logger } from '../services/logging';
-import { NotFoundError, BadRequestError, UnauthorizedError } from '../errors';
+import { NotFoundError, BadRequestError, UnauthorizedError, ConflictError } from '../errors';
 import { ILibrary, IBrollFootageMetadata } from '../types';
 import {
   deleteFromS3,
@@ -16,8 +16,10 @@ import {
   enqueueLibraryItemDeletionTask,
   enqueueLibraryItemThumbnailGenerationTask,
   enqueueLibraryItemVideoEmbeddingTask,
-  enqueueLibraryItemHashGenerationTask
+  enqueueLibraryItemHashGenerationTask,
+  enqueueLibraryClusteringTask
 } from '../services/task-queue';
+import { MIN_BROLL_COUNT, RECLUSTER_COOLDOWN_MS } from './clustering.service';
 import { generateMetadataForVideo } from '../agents/metadata-generation.qwen.agent';
 import { ILibraryUpload, LibraryTaskSettings, VideoCategorizationMetadata, IPopulatedLibrary } from 'shared/types';
 import brollRepository from '../repositories/broll.repository';
@@ -493,6 +495,38 @@ export class LibraryService {
       progress: 0,
       asyncProgress
     });
+  }
+
+  /**
+   * Manually trigger (or re-trigger) clustering for a library. Also fires
+   * automatically once a library finishes processing (see
+   * library-item-processing-processor.ts) — this is for re-clustering later,
+   * e.g. after adding a lot of new footage.
+   */
+  async triggerClustering(libraryId: string, userId: string): Promise<{ alreadyRunning: boolean }> {
+    const library = await libraryRepository.findByIdAndUserId(libraryId, userId);
+    if (!library) {
+      throw new NotFoundError('Library not found');
+    }
+
+    const embeddedCount = await brollRepository.countEmbeddingsForClustering(libraryId);
+    if (embeddedCount < MIN_BROLL_COUNT) {
+      throw new BadRequestError(
+        `Library needs at least ${MIN_BROLL_COUNT} processed videos to cluster (has ${embeddedCount})`
+      );
+    }
+
+    const lastClusteredAt = library.clusteringMetadata?.clusteringDate;
+    if (lastClusteredAt) {
+      const msSinceLastRun = Date.now() - new Date(lastClusteredAt).getTime();
+      if (msSinceLastRun < RECLUSTER_COOLDOWN_MS) {
+        const retryInSeconds = Math.ceil((RECLUSTER_COOLDOWN_MS - msSinceLastRun) / 1000);
+        throw new ConflictError(`This library was just clustered — try again in ${retryInSeconds}s`);
+      }
+    }
+
+    const { alreadyRunning } = await enqueueLibraryClusteringTask({ libraryId, version: '1.0.0' });
+    return { alreadyRunning };
   }
 
   /**

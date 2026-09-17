@@ -52,6 +52,16 @@ export default {
 
     res.json({ message: 'Library reprocessing scheduled.' });
   },
+
+  triggerClustering: async (req: AuthenticatedRequest, res: Response) => {
+    const libraryId = req.params.id;
+    const { alreadyRunning } = await libraryService.triggerClustering(libraryId, req.user!.user_id);
+
+    res.json({
+      message: alreadyRunning ? 'Clustering is already running for this library.' : 'Clustering job queued.',
+      alreadyRunning
+    });
+  },
   deleteById: async (req: AuthenticatedRequest, res: Response) => {
     const libraryId = req.params.id;
 

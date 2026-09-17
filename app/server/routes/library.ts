@@ -101,6 +101,15 @@ router.post(
   validateRequest({ params: libraryIdParamSchema, body: reprocessLibraryBodySchema }),
   asyncHandler(libraryController.reprocess)
 );
+
+router.post(
+  '/:id/cluster',
+  authenticateJWT,
+  restrictRoleAccess(['admin', 'editor', 'user']),
+  validateRequest({ params: libraryIdParamSchema }),
+  asyncHandler(libraryController.triggerClustering)
+);
+
 router.delete(
   '/:id',
   authenticateJWT,

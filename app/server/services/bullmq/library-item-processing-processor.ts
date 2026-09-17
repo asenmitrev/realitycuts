@@ -18,6 +18,7 @@ import { TranscriptionJob } from "server/models/transcription-job";
 import videoAiDataRepository from "server/repositories/video-ai-data.repository";
 import {
 	enqueueLambdaVideoGenerationTask,
+	enqueueLibraryClusteringTask,
 	enqueueLibraryItemDeletionTask,
 	enqueueLibraryItemMediaGenerationTask,
 } from "server/services/task-queue";
@@ -372,6 +373,13 @@ async function checkAndSendEmail(libraryId: string): Promise<void> {
 	if (!library) {
 		logger.warn("Library not found or email already sent", { libraryId });
 		return;
+	}
+
+	try {
+		await enqueueLibraryClusteringTask({ libraryId, version: "1.0.0" });
+	} catch (err) {
+		logger.error("Failed to enqueue library clustering job", { libraryId, error: err });
+		// Non-fatal — don't fail the whole job
 	}
 
 	// One-shot pipeline: if a video generation job is waiting on this library
