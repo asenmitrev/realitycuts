@@ -83,11 +83,13 @@ services:
       - app/server/.env
     volumes:
       - ./app/server/.vertex-key.json:/app/.vertex-key.json:ro
-      # The server writes all of its scratch/temp files under /tmp (library import
-      # staging, video/TTS/export processing, etc). Bind-mounting it here keeps that
-      # data on this disk/directory instead of Docker's own storage location, which
-      # is what actually overloads the OS disk on multi-gigabyte library imports.
+      # Scratch space: library import staging and TTS audio land under /tmp, and
+      # the export pipeline writes its intermediate FFmpeg files to /app/data
+      # (the cwd-relative ./data inside the image). Bind-mounting both keeps the
+      # multi-gigabyte data on this disk/directory instead of Docker's own
+      # storage location, which is what actually overloads the OS disk.
       - ./data/server-tmp:/tmp
+      - ./data/server-export:/app/data
     extra_hosts:
       # Lets the container reach LLM servers (e.g. LM Studio, local Qwen) bound
       # to the host's localhost via http://host.docker.internal:<port>/v1
@@ -123,10 +125,11 @@ services:
     depends_on:
       - server
 
-# Redis, MinIO, and the server's /tmp scratch space are bind-mounted under ./data
-# (see the volumes: entries above) so the multi-gigabyte data lives on whatever disk
-# this checkout is on, rather than under Docker's own storage root (typically
-# /var/lib/docker, usually on the OS/home disk). ./data is gitignored.
+# Redis, MinIO, and the server's scratch space (/tmp and /app/data) are
+# bind-mounted under ./data (see the volumes: entries above) so the
+# multi-gigabyte data lives on whatever disk this checkout is on, rather than
+# under Docker's own storage root (typically /var/lib/docker, usually on the
+# OS/home disk). ./data is gitignored.
 #
 # Mongo's volumes below stay Docker-managed on purpose — see the comment on the mongo
 # service.

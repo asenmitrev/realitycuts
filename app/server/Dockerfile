@@ -47,6 +47,13 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/app/server/dist_server ./dist
 COPY --from=builder /app/app/server/package.json ./package.json
 COPY --from=builder /app/shared/package.json ./shared/package.json
+# Static media assets referenced by cwd-relative paths at runtime: blank source
+# video templates (voiceover-only exports), endscreen clips (UAT), the default
+# watermark image, and caption fonts. The export pipeline fails without these.
+COPY --from=builder /app/app/server/templates ./templates
+COPY --from=builder /app/app/server/images ./images
+COPY --from=builder /app/app/server/videos ./videos
+COPY --from=builder /app/app/server/fonts ./fonts
 
 EXPOSE 3021
 

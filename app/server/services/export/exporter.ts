@@ -836,7 +836,7 @@ export async function exportVideo(
     if (data.audioEnabled && data.audio?.[data.audioIndex]?.preview) {
       const [filename1, filepath1] = await addAudioToVideo(
         filepath,
-        data.audio?.[data.audioIndex]?.preview,
+        toInternalMediaUrl(data.audio?.[data.audioIndex]?.preview ?? ''),
         data.audioVolume ?? 0.1,
         resolution.duration,
         percent => {
@@ -860,7 +860,7 @@ export async function exportVideo(
     if (data.audioEnabled && data.audio?.[data.audioIndex]?.preview) {
       const [filename1, filepath1] = await addAudioToVideo(
         filepath,
-        data.audio?.[data.audioIndex]?.preview,
+        toInternalMediaUrl(data.audio?.[data.audioIndex]?.preview ?? ''),
         data.audioVolume ?? 0.1,
         resolution.duration ?? 3,
         percent => {

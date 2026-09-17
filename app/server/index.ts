@@ -3,6 +3,8 @@ import { configureDotenv } from './config/dotenv';
 // Load environment variables FIRST (before any other imports that might use them)
 configureDotenv();
 
+import fs from 'fs';
+import path from 'path';
 import mongoose from 'mongoose';
 import { connectMongo } from './models/connect';
 import { ensureBrollVectorSearchIndex } from './models/broll-video-metadata';
@@ -15,6 +17,13 @@ const port = process.env.PORT ?? 3021;
 main().catch(err => logger.error(err));
 
 async function main() {
+  // Scratch dirs are gitignored and don't exist on a fresh checkout or in a
+  // fresh container: the export pipeline writes all intermediate FFmpeg files
+  // to ./data (cwd-relative) and TTS writes to /tmp/data. Create them before
+  // any worker can pick up a job, or the first file write fails with ENOENT.
+  fs.mkdirSync(path.join(process.cwd(), 'data'), { recursive: true });
+  fs.mkdirSync('/tmp/data', { recursive: true });
+
   await connectMongo(true);
   await ensureBrollVectorSearchIndex();
 

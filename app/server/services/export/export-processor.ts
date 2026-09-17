@@ -5,7 +5,7 @@ import { tryCatchError } from '../../utils/error-handling';
 import { safelyDelete } from '../fs';
 import { exportGrayVideo, exportVideo, recropVerticalVideo } from './exporter';
 import { ExportJob } from '../../models/export-job';
-import { getS3FileUrl } from '../../config/storage';
+import { getS3FileUrl, toInternalMediaUrl } from '../../config/storage';
 import { ITranscriptionJob, IVideoAIDataWithTranscriptionJob } from '../../types';
 import { HighlightInstance } from '../../models/highlight-instance';
 import { trimAndRemoveWords } from '../video-manipulation/trimming';
@@ -124,6 +124,11 @@ export const exportJobProcessor = async (jobId: string) => {
     }
     const source = videoAiData.source;
 
+    // ffmpeg reads the source URL directly when no local intermediate exists yet.
+    // Rewrite the browser-facing media URL to the server-reachable endpoint
+    // (no-op when both point at the same host, e.g. local dev).
+    const sourceUrl = toInternalMediaUrl(source.url);
+
     const exportType = job.exportType ?? 'VIDEO_CAPTIONS';
     const orientationType = job.orientationType ?? 'HORIZONTAL';
 
@@ -153,7 +158,7 @@ export const exportJobProcessor = async (jobId: string) => {
         highlightSegments = getSegments(highlight?.editedWordsList ?? videoAiData.editedWordsList);
         const [fn, previewVideoLocation] = await tryCatchError(
           () =>
-            trimAndRemoveWords(highlightSegments!, source.url, percent => {
+            trimAndRemoveWords(highlightSegments!, sourceUrl, percent => {
               percent &&
                 sendMessage(
                   userId,
@@ -177,7 +182,7 @@ export const exportJobProcessor = async (jobId: string) => {
     if (recropData && recropData.length > 0 && orientationType === 'VERTICAL') {
       const [filename, videoLocation] = await tryCatchError(
         () =>
-          recropVerticalVideo(recropData!, outputVideoLocation ?? source.url, msg => {
+          recropVerticalVideo(recropData!, outputVideoLocation ?? sourceUrl, msg => {
             sendMessage(userId, job._id, msg, 17);
           }),
         userId,
@@ -201,7 +206,7 @@ export const exportJobProcessor = async (jobId: string) => {
             userId,
             videoAiData,
             highlightSegments ?? [],
-            outputVideoLocation ?? source.url,
+            outputVideoLocation ?? sourceUrl,
             percent => {
               percent &&
                 sendMessage(
@@ -246,7 +251,7 @@ export const exportJobProcessor = async (jobId: string) => {
       await tryCatchError(
         () =>
           addCaptionsToVideo({
-            videoPath: outputVideoLocation ?? source.url,
+            videoPath: outputVideoLocation ?? sourceUrl,
             outputVideoPath: captionedVideoLocation,
             transcript,
             subtitleSettings: videoAiData.captions ?? DEFAULT_CAPTIONS,
@@ -293,8 +298,8 @@ export const exportJobProcessor = async (jobId: string) => {
           const watermarkTmpPath = `./data/${Date.now()}-${brandUpload.fileName}`;
           await downloadFile(watermarkTmpPath, brandUpload.url);
           await addWatermark(
-outputVideoLocation ?? source.url,
-          watermarkedVideoLocation,
+            outputVideoLocation ?? sourceUrl,
+            watermarkedVideoLocation,
           {
             position: brandPosition ?? 'top-right',
               padding: 120,
@@ -315,7 +320,7 @@ outputVideoLocation ?? source.url,
       } else {
         // Add default watermark
         await addWatermark(
-          outputVideoLocation ?? source.url,
+          outputVideoLocation ?? sourceUrl,
           watermarkedVideoLocation,
           {
             position: 'top-right',
@@ -370,6 +375,16 @@ outputVideoLocation ?? source.url,
 
     // Determine which video to upload as the main video (for download)
     const mainVideoForUpload = watermarkedVideoLocation || outputVideoLocation;
+
+    // If no intermediate video was produced (no b-roll, highlights, captions, or
+    // watermark), there is nothing local to upload — download the source first.
+    let sourceDownloadPath: string | undefined;
+    if (!mainVideoForUpload) {
+      sourceDownloadPath = `./data/${Date.now()}-source.mp4`;
+      await downloadFile(sourceDownloadPath, source.url);
+    }
+    const uploadPath = mainVideoForUpload ?? sourceDownloadPath!;
+
     outputFileName = `users/${userId}/${sanitizeString(title ?? videoAiData.title ?? 'video')}_${outputFileName}`;
     const expireDate = moment(new Date()).add(5, 'days').toDate();
 
@@ -377,12 +392,12 @@ outputVideoLocation ?? source.url,
     await tryCatchError(
       () =>
         uploadToS3(
-          mainVideoForUpload ?? source.url,
+          uploadPath,
           outputFileName,
           {
             mimeType: 'video/mp4',
             originalName: outputFileName,
-            fileSize: fs.statSync(mainVideoForUpload ?? source.url).size,
+            fileSize: fs.statSync(uploadPath).size,
             userId: userId
           },
           expireDate
@@ -424,6 +439,7 @@ outputVideoLocation ?? source.url,
     // Clean up local video files
     outputVideoLocation && safelyDelete(outputVideoLocation);
     watermarkedVideoLocation && safelyDelete(watermarkedVideoLocation);
+    sourceDownloadPath && safelyDelete(sourceDownloadPath);
   } catch (e: any) {
     logger.error('Error processing export job', {
       Error: e?.toString(),
