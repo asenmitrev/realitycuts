@@ -18,5 +18,6 @@ router.use('/upload', require('./upload').default || require('./upload'));
 router.use('/brand-assets', require('./brand-assets').default || require('./brand-assets'));
 router.use('/search', require('./search').default || require('./search'));
 router.use('/chat', require('./chat').default || require('./chat'));
+router.use('/youtube', require('./youtube-upload').default || require('./youtube-upload'));
 
 export default router;

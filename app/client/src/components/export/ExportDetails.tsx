@@ -19,6 +19,7 @@ import { Link as RouterLink } from 'react-router-dom';
 import { useApiService } from '../../hooks/useApiService';
 import { ExportJob, VideoAIData } from '../../types';
 import { FaCalendar, FaCheck, FaDownload, FaEdit } from 'react-icons/fa';
+import { UploadToYouTubeButton } from './UploadToYouTubeButton';
 
 const Export: FC<{ data: ExportJob & { videoDataId: VideoAIData } }> = ({ data }) => {
   const backButtonText = useBreakpointValue({ base: 'Edit Video', md: 'Back to Project' });
@@ -61,6 +62,9 @@ const Export: FC<{ data: ExportJob & { videoDataId: VideoAIData } }> = ({ data }
       >
         Download
       </Button>
+      {data.exportType !== 'FCPXML' && (
+        <UploadToYouTubeButton videoUrl={data.videoUrl} defaultTitle={data.videoDataId.title} />
+      )}
     </>
   );
 

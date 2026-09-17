@@ -153,6 +153,7 @@ const MenuLinks: FC = () => {
         <MenuItem to="/videos">My Projects</MenuItem>
         <MenuItem to="/libraries">My Libraries</MenuItem>
         <MenuItem to="/automation-configs">My Automations</MenuItem>
+        <MenuItem to="/youtube">YouTube</MenuItem>
       </Stack>
     </Box>
   );
@@ -202,6 +203,7 @@ const NavBarContainer: FC<
           <MenuItem to="/videos">My Projects</MenuItem>
           <MenuItem to="/libraries">My Libraries</MenuItem>
           <MenuItem to="/automation-configs">My Automations</MenuItem>
+          <MenuItem to="/youtube">YouTube</MenuItem>
           {onSwitchAccount && (
             <Text
               color="white"

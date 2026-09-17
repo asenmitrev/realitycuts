@@ -49,6 +49,7 @@ import { AdminChatViewer } from './components/admin/AdminChatViewer.tsx';
 import { AutomationConfigList } from './components/automation/AutomationConfigList.tsx';
 import { NewAutomationConfigPage, EditAutomationConfigPage } from './components/automation/AutomationConfigPage.tsx';
 import { BrandAssetsPage } from './components/branding/BrandAssets';
+import { YouTubeSettingsPage } from './components/youtube/YouTubeSettings';
 import { UserStatsProvider } from './contexts/userStats';
 
 const queryClient = new QueryClient({
@@ -174,6 +175,14 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute>
             <BrandAssetsPage />
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: 'youtube',
+        element: (
+          <ProtectedRoute>
+            <YouTubeSettingsPage />
           </ProtectedRoute>
         )
       },

@@ -238,6 +238,15 @@ export interface IUserProfile {
   excludeFromAnalytics?: boolean;
   role: UserRole;
   isAnonymous?: boolean;
+  youtubeChannels?: IYoutubeChannel[];
+}
+
+export interface IYoutubeChannel {
+  channelId: string;
+  channelTitle: string;
+  accessToken?: string | null;
+  refreshToken?: string | null;
+  expiresAt?: number | null;
 }
 export type LibraryTaskSettings = {
   files: {

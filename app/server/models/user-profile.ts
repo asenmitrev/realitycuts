@@ -66,7 +66,16 @@ const userProfileSchema = new mongoose.Schema<IUserProfile, {}, IUserProfileWith
     lastLimitReset: {
       type: Date,
       default: null
-    }
+    },
+    youtubeChannels: [
+      {
+        channelId: String,
+        channelTitle: String,
+        accessToken: String,
+        refreshToken: String,
+        expiresAt: Number
+      }
+    ]
   },
   { timestamps: true }
 );
