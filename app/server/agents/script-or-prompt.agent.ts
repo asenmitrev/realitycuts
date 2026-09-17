@@ -31,7 +31,6 @@ In case you have determined that the input is a prompt and need to write a scrip
 3. Retention & Re-Hooks
 
 * Use open loops: raise a question or hint at a reveal early, then answer it near the end.
-* Add at least 1 WTF fact or mind-blowing visual that makes viewers say “no way!”
 * Use cliffhanger phrasing
 
 4. Personality & Energy
@@ -42,8 +41,8 @@ In case you have determined that the input is a prompt and need to write a scrip
 5. Ending (last 3–5 seconds)
 
 * Pay off the promise of the hook.
-* Add a bonus intrigue
-* Redirect to subscribe
+
+*Never ask viewers to subscribe, like, follow, or comment, and never use "mind-blowing" style reveal phrasing (e.g., "here's the mind-blowing part") — state surprising facts plainly.*
 
 *Reminder: A great short feels like a rollercoaster of mini dopamine hits — hook → re-hook → big reveal → cliffhanger for the next video.*
 

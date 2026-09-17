@@ -23,7 +23,7 @@ import { generateAndUploadThumbnail } from './video-generation/footage-generatio
 import mime from 'mime';
 import fs from 'fs';
 import { analyzeAndGenerateScript } from '../agents/script-or-prompt.agent';
-import { generateScript } from './video-generation/v13-script-writer';
+// import { generateScript } from './video-generation/v13-script-writer'; // temporarily disabled: library-aware script generation
 import libraryRepository from '../repositories/library.repository';
 import automationHistoryRepository from '../repositories/automation-history.repository';
 import { videoTitleSuggestionAgent } from '../agents/video-title-suggestion.agent';
@@ -290,12 +290,13 @@ export const generationProcessorV2 = async (
     let blackThumbnail = false;
     let isAudioOnly = false;
     let metadata: Awaited<ReturnType<typeof getMetadata>> | undefined;
-    let history = '';
+    // let history = '';
     let processedScript: string = '';
-    if (historyKey && hirizontallyAdjustedHistoryKey) {
-      const historyRecords = await automationHistoryRepository.findByChannel(hirizontallyAdjustedHistoryKey, 50);
-      history = historyRecords.map(video => video.script.substring(0, 300)).join('\n\n\n');
-    }
+    // History fetch only fed the (currently disabled) library-aware script writer:
+    // if (historyKey && hirizontallyAdjustedHistoryKey) {
+    //   const historyRecords = await automationHistoryRepository.findByChannel(hirizontallyAdjustedHistoryKey, 50);
+    //   history = historyRecords.map(video => video.script.substring(0, 300)).join('\n\n\n');
+    // }
     if (script) {
       if (uploadType === 'script') {
         // For script type, remove annotations
@@ -303,39 +304,43 @@ export const generationProcessorV2 = async (
         processedScript = deannotatedScript;
       } else if (uploadType === 'prompt') {
         // For prompt type, run scriptwriter
-        if (
-          (privateLibraryIds && privateLibraryIds.length > 0) ||
-          (publicLibraryIdsFromConfig && publicLibraryIdsFromConfig.length > 0)
-        ) {
-          try {
-            const scriptResult = await generateScript(
-              script,
-              [...(privateLibraryIds ?? []), ...(publicLibraryIdsFromConfig ?? [])],
-              history,
-              orientation === 'HORIZONTAL',
-              userId,
-              linkedChannelIds,
-              hirizontallyAdjustedHistoryKey
-            );
-            processedScript = scriptResult;
-
-            logger.info('Generated library-aware script from prompt', {
-              userId,
-              tjId,
-              scriptLength: processedScript.length
-            });
-          } catch (error) {
-            logger.warn('Library-aware script generation failed, falling back to standard generation', {
-              userId,
-              tjId,
-              error: error
-            });
-            throw error;
-          }
-        } else {
-          const { script: result } = await analyzeAndGenerateScript(script);
-          processedScript = result;
-        }
+        // NOTE: library-aware script generation is temporarily disabled (commented out below).
+        // Prompts always use standard script generation for now.
+        // if (
+        //   (privateLibraryIds && privateLibraryIds.length > 0) ||
+        //   (publicLibraryIdsFromConfig && publicLibraryIdsFromConfig.length > 0)
+        // ) {
+        //   try {
+        //     const scriptResult = await generateScript(
+        //       script,
+        //       [...(privateLibraryIds ?? []), ...(publicLibraryIdsFromConfig ?? [])],
+        //       history,
+        //       orientation === 'HORIZONTAL',
+        //       userId,
+        //       linkedChannelIds,
+        //       hirizontallyAdjustedHistoryKey
+        //     );
+        //     processedScript = scriptResult;
+        //
+        //     logger.info('Generated library-aware script from prompt', {
+        //       userId,
+        //       tjId,
+        //       scriptLength: processedScript.length
+        //     });
+        //   } catch (error) {
+        //     logger.warn('Library-aware script generation failed, falling back to standard generation', {
+        //       userId,
+        //       tjId,
+        //       error: error
+        //     });
+        //     throw error;
+        //   }
+        // } else {
+        //   const { script: result } = await analyzeAndGenerateScript(script);
+        //   processedScript = result;
+        // }
+        const { script: result } = await analyzeAndGenerateScript(script);
+        processedScript = result;
       }
 
       sendMessage(

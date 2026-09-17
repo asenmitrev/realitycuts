@@ -175,7 +175,7 @@ export async function generateScriptNode(
   Formulate an improved script, without annotations or anything of the sort:`)
   ];
 
-  const { messages } = await getScriptWriterAgent().invoke({ messages: inputMessages }, { recursionLimit: 16 });
+  const { messages } = await getScriptWriterAgent().invoke({ messages: inputMessages }, { recursionLimit: 100 });
 
   for (const message of messages) {
     logger.debug('Script Writer Message ---\n\n', message.text);

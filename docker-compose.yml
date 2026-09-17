@@ -6,9 +6,9 @@ services:
     volumes:
       - ./data/redis:/data
     ports:
-      - "6379:6379"
+      - '6379:6379'
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 5s
       timeout: 3s
       retries: 5
@@ -22,10 +22,10 @@ services:
       MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - '9000:9000'
+      - '9001:9001'
     healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
+      test: ['CMD', 'mc', 'ready', 'local']
       interval: 5s
       timeout: 3s
       retries: 5
@@ -67,7 +67,7 @@ services:
       MONGODB_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:-admin}
       MONGODB_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-adminpassword}
     ports:
-      - "27017:27017"
+      - '27017:27017'
     # Image ships its own HEALTHCHECK covering mongod + mongot readiness;
     # do not override it here.
     # The image's own PID 1 ("runner") occasionally panics on a slow/flaky mongot
@@ -83,7 +83,7 @@ services:
       context: .
       dockerfile: app/server/Dockerfile
     ports:
-      - "3021:3021"
+      - '3021:3021'
     # Real API keys live in app/server/.env; explicit `environment` entries
     # below override anything from this file (hosts/URLs for the compose network).
     env_file:
@@ -100,10 +100,14 @@ services:
     extra_hosts:
       # Lets the container reach LLM servers (e.g. LM Studio, local Qwen) bound
       # to the host's localhost via http://host.docker.internal:<port>/v1
-      - "host.docker.internal:host-gateway"
+      - 'host.docker.internal:host-gateway'
     environment:
       - ENVIRONMENT=local
       - PORT=3021
+      # VLLM runs on the host; containers can't use localhost, so route via the
+      # host gateway (see extra_hosts). Overrides the localhost URL from .env,
+      # which stays correct for bare `yarn start` on the host.
+      - LOCAL_LLM_BASE_URL=http://host.docker.internal:1234/v1
       - MONGODB_URI=${MONGODB_URI:-mongodb://${MONGO_ROOT_USERNAME:-admin}:${MONGO_ROOT_PASSWORD:-adminpassword}@mongo:27017/videoai?authSource=admin&directConnection=true}
       - REDIS_HOST=redis
       - MINIO_ENDPOINT=http://minio:9000
@@ -128,7 +132,7 @@ services:
       context: .
       dockerfile: app/client/Dockerfile
     ports:
-      - "3020:3020"
+      - '3020:3020'
     depends_on:
       - server
 
