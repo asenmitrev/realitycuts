@@ -7,6 +7,7 @@ import axios from 'axios';
 import { pipeline } from 'stream/promises';
 import { v4 as uuidv4 } from 'uuid';
 import { YOUTUBE_CLIENT_ID, YOUTUBE_CLIENT_SECRET, API_URL, CLIENT_URL } from '../config/const';
+import { toInternalMediaUrl } from '../config/storage';
 import { logger } from './logging';
 import { BadRequestError } from '../errors/BadRequestError';
 import { NotFoundError } from '../errors/NotFoundError';
@@ -154,7 +155,10 @@ export class YouTubeUploadService {
     const tempFilePath = path.join(os.tmpdir(), `youtube-upload-${uuidv4()}.mp4`);
 
     try {
-      const response = await axios({ url: videoUrl, method: 'GET', responseType: 'stream' });
+      // videoUrl is the browser-facing MEDIA_BASE_URL link; under docker compose that
+      // host doesn't resolve from inside the server container, so fetch it server-side
+      // via the internal MinIO endpoint instead (same rewrite exporter.ts/fs.ts use).
+      const response = await axios({ url: toInternalMediaUrl(videoUrl), method: 'GET', responseType: 'stream' });
       await pipeline(response.data, fs.createWriteStream(tempFilePath));
 
       const authClient = this.createAuthClient({
