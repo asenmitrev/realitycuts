@@ -122,6 +122,25 @@ async function sendVideoGenerationEvent(
     return false;
   }
 
+  const youtubePlatform = automation.platforms?.youtube;
+  const youtubeChannelId = youtubePlatform?.enabled ? youtubePlatform.channelId : undefined;
+
+  if (youtubeChannelId && !userProfile.youtubeChannels?.some(ch => ch.channelId === youtubeChannelId)) {
+    logger.error('YouTube channel no longer connected for automation, disabling', {
+      userId: automation.userId,
+      configId
+    });
+    await notificationRepository.create({
+      userId: automation.userId,
+      type: 'AUTOMATION_FAILED',
+      title: `Automation ${automation.contentSettings?.theme || ''} disabled`,
+      message: 'The YouTube channel connected to this automation is no longer available. Reconnect it, or turn off YouTube upload for this automation, then re-enable it.',
+      links: []
+    });
+    await automationConfigRepository.updateById(configId, { isEnabled: false });
+    return false;
+  }
+
   const historyKey = configId || 'automation';
 
   if (userProfile.getTTSMinutesRemaining() <= 0) {
@@ -161,7 +180,13 @@ async function sendVideoGenerationEvent(
     orientationType,
     brandWatermarkUploadId: automation.contentSettings?.brandWatermarkUploadId,
     brandWatermarkPosition: automation.contentSettings?.brandWatermarkPosition,
-    generateThumbnail: orientationType === 'HORIZONTAL' && automation.contentSettings?.generateThumbnail === true
+    generateThumbnail: orientationType === 'HORIZONTAL' && automation.contentSettings?.generateThumbnail === true,
+    youtubeUpload: youtubeChannelId
+      ? {
+          channelId: youtubeChannelId,
+          isPublic: automation.contentSettings?.isPublic ?? false
+        }
+      : undefined
   };
 
   const videoGenerationEventData: VideoGenerationEventDataV3 = {

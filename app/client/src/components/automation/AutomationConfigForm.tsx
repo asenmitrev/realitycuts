@@ -18,6 +18,7 @@ import { AutomationConfigFormData, IAutomationConfig } from '../../types';
 import { BasicInformation } from './BasicInformation';
 import { ScheduleConfiguration } from './ScheduleConfiguration';
 import { ContentSettings } from './ContentSettings';
+import { PlatformSelection } from './PlatformSelection';
 import { LibrarySelection } from './LibrarySelection';
 import { CaptionPresetSelection } from './CaptionPresetSelection';
 import { CombinedPreview } from './CombinedPreview';
@@ -91,6 +92,13 @@ const defaultValues: AutomationConfigFormData = {
     generateThumbnail: true,
     captionPreset: undefined,
     sources: []
+  },
+  platforms: {
+    youtube: {
+      enabled: false,
+      channelId: undefined,
+      channelName: undefined
+    }
   },
   libraries: [],
   selectedTags: []
@@ -180,6 +188,13 @@ export const AutomationConfigForm: FC<AutomationConfigFormProps> = ({ existingCo
         generateThumbnail: existingConfig.contentSettings.generateThumbnail || false,
         sources: existingConfig.contentSettings?.sources ?? []
       },
+      platforms: {
+        youtube: {
+          enabled: existingConfig.platforms?.youtube?.enabled ?? false,
+          channelId: existingConfig.platforms?.youtube?.channelId,
+          channelName: existingConfig.platforms?.youtube?.channelName
+        }
+      },
       pexels: existingConfig.contentSettings.pexels || false,
       isAllPublicLibrariesSelected: existingConfig.contentSettings.allPublicLibrariesSelected || false,
       libraries: [],
@@ -259,6 +274,13 @@ export const AutomationConfigForm: FC<AutomationConfigFormProps> = ({ existingCo
           orientation: data.contentSettings.orientation || 'vertical',
           generateThumbnail: data.contentSettings.generateThumbnail || false,
           sources: data.contentSettings.sources ?? []
+        },
+        platforms: {
+          youtube: {
+            enabled: data.platforms?.youtube?.enabled ?? false,
+            channelId: data.platforms?.youtube?.enabled ? data.platforms?.youtube?.channelId : undefined,
+            channelName: data.platforms?.youtube?.enabled ? data.platforms?.youtube?.channelName : undefined
+          }
         }
       };
 
@@ -375,6 +397,8 @@ export const AutomationConfigForm: FC<AutomationConfigFormProps> = ({ existingCo
                     testGenerationResult={testGenerationResult}
                     handleTestGeneration={handleTestGeneration}
                   />
+
+                  <PlatformSelection />
 
                   {isEdit && id ? <AutomationScriptsPanel configId={id} /> : null}
 

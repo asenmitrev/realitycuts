@@ -207,6 +207,24 @@ async function getChapterScriptHandler() {
 }
 
 // ---------------------------------------------------------------------------
+// YouTube upload handler
+// ---------------------------------------------------------------------------
+
+let processYouTubeUploadTask:
+	| ((data: JobPayloadMap["youtube-upload"]) => Promise<void>)
+	| null = null;
+
+async function getYouTubeUploadHandler() {
+	if (!processYouTubeUploadTask) {
+		const { processYouTubeUploadTask: handler } = await import(
+			"./youtube-upload-processor.js"
+		);
+		processYouTubeUploadTask = handler;
+	}
+	return processYouTubeUploadTask;
+}
+
+// ---------------------------------------------------------------------------
 // Automation checker handler
 // ---------------------------------------------------------------------------
 
@@ -298,6 +316,11 @@ const HANDLERS: Partial<
 		const handler = await getAutomationCheckHandler();
 		if (!handler) throw new Error("Automation check handler not available");
 		return handler();
+	},
+	"youtube-upload": async (payload) => {
+		const handler = await getYouTubeUploadHandler();
+		if (!handler) throw new Error("YouTube upload handler not available");
+		return handler(payload as JobPayloadMap["youtube-upload"]);
 	},
 };
 

@@ -300,7 +300,9 @@ export type NotificationType =
   | 'EXPORT_COMPLETE'
   | 'VIDEO_COMPLETE'
   | 'LIBRARY_POPULATED'
-  | 'AUTOMATION_FAILED';
+  | 'AUTOMATION_FAILED'
+  | 'YOUTUBE_UPLOAD_COMPLETE'
+  | 'YOUTUBE_UPLOAD_FAILED';
 export type NotificationIdType = 'EXPORT' | 'VIDEO' | 'LIBRARY' | 'EXTERNAL';
 
 export type INotification = {
@@ -478,6 +480,13 @@ export interface ExportJob {
   brandWatermarkPosition?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'center';
   generateThumbnail?: boolean;
   thumbnailUrl?: string;
+  youtubeUpload?: {
+    channelId?: string;
+    title?: string;
+    description?: string;
+    isPublic?: boolean;
+    uploadedUrl?: string;
+  };
 }
 
 export type PineconeVideoMetadata = {

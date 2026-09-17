@@ -20,6 +20,7 @@ import type {
   LibraryItemThumbnailGenerationEventData,
   LibraryItemVideoEmbeddingEventData,
   VideoGenerationEventData,
+  YouTubeUploadEventData,
 } from "shared/types/event-contracts";
 import { logger } from "./logging";
 
@@ -104,6 +105,44 @@ export async function enqueueExporterTaskBullMQ(exportJobId: string) {
     return { method: "bullmq", jobId: job.id };
   } catch (error) {
     logger.error("Error enqueuing export job via BullMQ", {
+      exportJobId,
+      error: error instanceof Error ? error.message : "Unknown error",
+    });
+    throw error;
+  }
+}
+
+/**
+ * Enqueue a YouTube upload for a completed export job via BullMQ.
+ */
+export async function enqueueYouTubeUploadTaskBullMQ(exportJobId: string) {
+  try {
+    const { getQueue } = await import("./bullmq/queues.js");
+    const { QUEUE_NAMES } = await import("./bullmq/types.js");
+    const queue = await getQueue(QUEUE_NAMES.YOUTUBE_UPLOAD);
+
+    const eventData: YouTubeUploadEventData = {
+      exportJobId,
+      version: "1.0.0",
+    };
+
+    const job = await queue.add("youtube-upload", eventData, {
+      jobId: `youtube-upload-${exportJobId}`,
+      attempts: 3,
+      backoff: {
+        type: "exponential",
+        delay: 10_000,
+      },
+    });
+
+    logger.info("YouTube upload task enqueued via BullMQ", {
+      exportJobId,
+      jobId: job.id,
+    });
+
+    return { method: "bullmq", jobId: job.id };
+  } catch (error) {
+    logger.error("Error enqueuing YouTube upload task via BullMQ", {
       exportJobId,
       error: error instanceof Error ? error.message : "Unknown error",
     });

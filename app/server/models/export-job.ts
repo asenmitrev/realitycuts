@@ -33,7 +33,14 @@ const exportJobSchema = new mongoose.Schema<IExportJob>(
       enum: ['QUEUED', 'PROCESSING', 'UPLOADING', 'COMPLETED', 'FAILED', 'IN_REVIEW']
     },
     generateThumbnail: Boolean,
-    thumbnailUrl: String
+    thumbnailUrl: String,
+    youtubeUpload: {
+      channelId: String,
+      title: String,
+      description: String,
+      isPublic: Boolean,
+      uploadedUrl: String
+    }
   },
   { timestamps: true, toObject: { getters: true } }
 );

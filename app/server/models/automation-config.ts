@@ -89,6 +89,13 @@ const automationConfigSchema = new mongoose.Schema<IAutomationConfig>(
         }
       ]
     },
+    platforms: {
+      youtube: {
+        enabled: { type: Boolean, default: false },
+        channelId: { type: String },
+        channelName: { type: String }
+      }
+    },
     lastProcessed: {
       type: Date,
       default: null

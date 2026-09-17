@@ -410,6 +410,11 @@ outputVideoLocation ?? source.url,
     job.status = 'COMPLETED';
     await job.save();
 
+    if (job.youtubeUpload?.channelId) {
+      const { enqueueYouTubeUploadTaskBullMQ } = await import('../task-queue.js');
+      await enqueueYouTubeUploadTaskBullMQ(job._id.toString());
+    }
+
     await sendData(userId, job._id, { isExport: true, _id: job._id });
 
     // Send export completion notification

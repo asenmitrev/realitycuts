@@ -471,6 +471,13 @@ export interface AutomationConfigFormData {
     generateThumbnail?: boolean;
     sources?: IAutomationSource[];
   };
+  platforms?: {
+    youtube?: {
+      enabled?: boolean;
+      channelId?: string;
+      channelName?: string;
+    };
+  };
   pexels: boolean;
   libraries: (ILibrary & { isSelected: boolean; videoCount?: number })[];
   selectedTags: Tag[];
@@ -512,6 +519,13 @@ export interface IAutomationConfig {
     orientation?: 'horizontal' | 'vertical';
     generateThumbnail?: boolean;
     sources?: IAutomationSource[];
+  };
+  platforms?: {
+    youtube?: {
+      enabled?: boolean;
+      channelId?: string;
+      channelName?: string;
+    };
   };
   lastProcessed?: Date;
   status: 'ACTIVE' | 'PAUSED';
