@@ -2,7 +2,66 @@ import { BrollFootageMetadata } from '../models/broll-video-metadata';
 import { IBrollFootageMetadata } from '../types';
 import { getObjectId } from '../utils/mongoose-utils';
 
+function embeddedForClusteringFilter(libraryId: string) {
+  return {
+    libraryId,
+    isDeleted: { $ne: true },
+    videoEmbedding: { $exists: true, $not: { $size: 0 } }
+  };
+}
+
 export class BrollRepository {
+  /**
+   * Find broll footage with a video embedding for a library, for clustering.
+   * `videoEmbedding` is `select: false` on the schema, so it must be requested explicitly.
+   */
+  async findEmbeddingsForClustering(
+    libraryId: string
+  ): Promise<Pick<IBrollFootageMetadata, '_id' | 'title' | 'videoEmbedding'>[]> {
+    return await BrollFootageMetadata.find(embeddedForClusteringFilter(libraryId), {
+      title: 1,
+      videoEmbedding: 1
+    }).lean();
+  }
+
+  /**
+   * Cheap count-only version of `findEmbeddingsForClustering`, for pre-checking
+   * whether a library has enough embedded broll to bother clustering.
+   */
+  async countEmbeddingsForClustering(libraryId: string): Promise<number> {
+    return await BrollFootageMetadata.countDocuments(embeddedForClusteringFilter(libraryId));
+  }
+
+  /**
+   * Bulk-assign cluster IDs produced by a clustering run. Chunked so a huge
+   * library doesn't push one giant bulkWrite payload through the driver.
+   */
+  async bulkSetClusterAssignments(
+    assignments: { id: string; clusterId: number | null }[],
+    clusterVersion: number
+  ): Promise<void> {
+    const CHUNK_SIZE = 1000;
+    for (let i = 0; i < assignments.length; i += CHUNK_SIZE) {
+      await this.bulkSetClusterAssignmentsChunk(assignments.slice(i, i + CHUNK_SIZE), clusterVersion);
+    }
+  }
+
+  private async bulkSetClusterAssignmentsChunk(
+    assignments: { id: string; clusterId: number | null }[],
+    clusterVersion: number
+  ): Promise<void> {
+    if (assignments.length === 0) return;
+
+    await BrollFootageMetadata.bulkWrite(
+      assignments.map(({ id, clusterId }) => ({
+        updateOne: {
+          filter: { _id: getObjectId(id) },
+          update: { $set: { clusterId, clusterVersion } }
+        }
+      }))
+    );
+  }
+
   /**
    * Find broll footage by ID
    */

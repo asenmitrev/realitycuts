@@ -12,6 +12,7 @@ import type {
 	ChatVideoFinalizationEventData,
 	ExportJobEventData,
 	FCPXMLExportEventData,
+	LibraryClusteringEventData,
 	LibraryImportEventData,
 	LibraryItemDeletionEventData,
 	LibraryItemMediaGenerationEventData,
@@ -35,6 +36,7 @@ export const QUEUE_NAMES = {
 	CHAPTER_SCRIPT: "chapter-script",
 	AUTOMATION_CHECK: "automation-check",
 	YOUTUBE_UPLOAD: "youtube-upload",
+	LIBRARY_CLUSTERING: "library-clustering",
 } as const;
 
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];
@@ -62,6 +64,7 @@ export interface JobPayloadMap {
 	"chapter-script": ChapterScriptEventData;
 	"automation-check": Record<string, never>;
 	"youtube-upload": YouTubeUploadEventData;
+	"library-clustering": LibraryClusteringEventData;
 }
 
 // ---------------------------------------------------------------------------
@@ -86,6 +89,9 @@ export const QUEUE_CONCURRENCY: Record<QueueName, number> = {
 	"automation-check": 1,
 	// Low concurrency: bounded by YouTube's own upload rate limits per channel.
 	"youtube-upload": 3,
+	// CPU-bound (k-means over up to a few thousand embeddings) — one at a time
+	// avoids starving the other in-process workers on a single-instance box.
+	"library-clustering": 1,
 };
 
 // ---------------------------------------------------------------------------

@@ -59,6 +59,12 @@ export type FCPXMLExportEventData = {
 	version: "1.0.0";
 };
 
+/** Fired once a library finishes processing — clusters its broll by video embedding similarity. */
+export type LibraryClusteringEventData = {
+	libraryId: string;
+	version: "1.0.0";
+};
+
 export type LibraryItemVideoEmbeddingEventData = {
 	brollId: string;
 	userId: string;

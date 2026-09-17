@@ -84,6 +84,8 @@ export const LibraryDetails = () => {
     handleSearch,
     deleteByYoutubeLink,
     findSimilarVideos,
+    triggerClustering,
+    isClustering,
     deleteLibraryDialog,
     deleteBrollDialog
   } = useLibraryOperations(id, refetchBroll);
@@ -158,6 +160,15 @@ export const LibraryDetails = () => {
                   isDisabled={library?.status === 'PROCESSING'}
                 >
                   + Add to Library
+                </Button>
+                <Button
+                  variant="outline"
+                  colorScheme="purple"
+                  onClick={triggerClustering}
+                  isLoading={isClustering}
+                  isDisabled={library?.status !== 'PROCESSED'}
+                >
+                  Cluster Now
                 </Button>
               </>
             )}

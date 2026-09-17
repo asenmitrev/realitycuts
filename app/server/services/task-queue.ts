@@ -12,6 +12,7 @@ import type {
   ChatVideoFinalizationEventData,
   ExportJobEventData,
   FCPXMLExportEventData,
+  LibraryClusteringEventData,
   LibraryImportEventData,
   LibraryItemClassificationEventData,
   LibraryItemDeletionEventData,
@@ -533,6 +534,49 @@ export async function enqueueChatVideoFinalizationTask(
     return { MessageId: job.id };
   } catch (error) {
     logger.error("Error enqueuing chat video finalization job via BullMQ:", error);
+    throw error;
+  }
+}
+
+export async function enqueueLibraryClusteringTask(
+  eventData: LibraryClusteringEventData,
+): Promise<{ MessageId: string; alreadyRunning: boolean }> {
+  try {
+    const { getQueue } = await import("./bullmq/queues.js");
+    const { QUEUE_NAMES } = await import("./bullmq/types.js");
+    const queue = await getQueue(QUEUE_NAMES.LIBRARY_CLUSTERING);
+
+    // One clustering slot per library, keyed by a fixed jobId. BullMQ's add()
+    // silently returns the *existing* job for a jobId that's already present —
+    // including one that finished a moment ago — so a fixed jobId alone would
+    // only ever cluster a library once, ever. Explicitly clearing a
+    // completed/failed slot before re-adding is what makes it "one at a time"
+    // (spamming while a run is active/waiting is a no-op) without permanently
+    // blocking every future run.
+    const jobId = `clustering-${eventData.libraryId}`;
+    const existing = await queue.getJob(jobId);
+    if (existing) {
+      const state = await existing.getState();
+      if (state === "completed" || state === "failed") {
+        await existing.remove();
+      } else {
+        logger.debug("Library clustering job already in flight, not re-enqueuing", {
+          jobId,
+          state,
+          libraryId: eventData.libraryId,
+        });
+        return { MessageId: existing.id!, alreadyRunning: true };
+      }
+    }
+
+    const job = await queue.add("library-clustering", eventData, { jobId });
+    logger.debug("Library clustering job enqueued via BullMQ", {
+      jobId: job.id,
+      libraryId: eventData.libraryId,
+    });
+    return { MessageId: job.id!, alreadyRunning: false };
+  } catch (error) {
+    logger.error("Error enqueuing library clustering job via BullMQ:", error);
     throw error;
   }
 }

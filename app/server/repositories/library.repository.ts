@@ -232,6 +232,16 @@ export class LibraryRepository {
   }
 
   /**
+   * Save the results of a clustering run onto the library.
+   */
+  async updateClusteringMetadata(
+    libraryId: string,
+    clusteringMetadata: ILibrary['clusteringMetadata']
+  ): Promise<void> {
+    await Library.updateOne({ _id: libraryId }, { $set: { clusteringMetadata } });
+  }
+
+  /**
    * Update broll footage by ID
    */
   async updateBroll(id: string, data: Partial<IBrollFootageMetadata>): Promise<IBrollFootageMetadata | null> {

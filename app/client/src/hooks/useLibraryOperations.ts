@@ -21,6 +21,7 @@ export const useLibraryOperations = (id: string | undefined, refetchBroll: () =>
   const navigate = useNavigate();
   const toast = useToast();
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isClustering, setIsClustering] = useState(false);
   const [isLoadingSearch, setIsLoadingSearch] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<VideoAlternative[]>([]);
@@ -98,6 +99,17 @@ export const useLibraryOperations = (id: string | undefined, refetchBroll: () =>
     [apiService, awaitBrollDeleteConfirmation, id, refetchBroll]
   );
 
+  const triggerClustering = useCallback(async () => {
+    if (!id) return;
+    setIsClustering(true);
+    try {
+      const response = await apiService.post<{ message: string; alreadyRunning: boolean }>(`/api/library/${id}/cluster`);
+      toast({ status: response.alreadyRunning ? 'info' : 'success', title: response.message });
+    } finally {
+      setIsClustering(false);
+    }
+  }, [apiService, id, toast]);
+
   const clearSearch = useCallback(() => {
     setSearchTerm('');
     setSearchResults([]);
@@ -130,6 +142,7 @@ export const useLibraryOperations = (id: string | undefined, refetchBroll: () =>
 
   return {
     isDeleting,
+    isClustering,
     isLoadingSearch,
     searchTerm,
     setSearchTerm,
@@ -142,6 +155,7 @@ export const useLibraryOperations = (id: string | undefined, refetchBroll: () =>
     deleteByYoutubeLink,
     clearSearch,
     findSimilarVideos,
+    triggerClustering,
     deleteLibraryDialog,
     deleteBrollDialog
   };
