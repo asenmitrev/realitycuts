@@ -7,11 +7,15 @@ import axios from 'axios';
 import { pipeline } from 'stream/promises';
 import { v4 as uuidv4 } from 'uuid';
 import { YOUTUBE_CLIENT_ID, YOUTUBE_CLIENT_SECRET, API_URL, CLIENT_URL } from '../config/const';
+import { toInternalMediaUrl } from '../config/storage';
 import { logger } from './logging';
 import { BadRequestError } from '../errors/BadRequestError';
 import { NotFoundError } from '../errors/NotFoundError';
 import youtubeUploadRepository from '../repositories/youtube-upload.repository';
 import userProfileRepository from '../repositories/user-profile.repository';
+import notificationRepository from '../repositories/notification.repository';
+import { ExportJob } from '../models/export-job';
+import { VideoAIData } from '../models/video-ai-data';
 import { IYoutubeChannel } from 'shared/types';
 
 const SCOPES = ['https://www.googleapis.com/auth/youtube.upload', 'https://www.googleapis.com/auth/youtube.readonly'];
@@ -132,7 +136,8 @@ export class YouTubeUploadService {
 
   async uploadVideo(
     userId: string,
-    videoData: { videoUrl: string; videoTitle: string; description?: string; channelId: string }
+    videoData: { videoUrl: string; videoTitle: string; description?: string; channelId: string },
+    isPublic: boolean = false
   ) {
     const { videoUrl, videoTitle, description, channelId } = videoData;
 
@@ -150,7 +155,10 @@ export class YouTubeUploadService {
     const tempFilePath = path.join(os.tmpdir(), `youtube-upload-${uuidv4()}.mp4`);
 
     try {
-      const response = await axios({ url: videoUrl, method: 'GET', responseType: 'stream' });
+      // videoUrl is the browser-facing MEDIA_BASE_URL link; under docker compose that
+      // host doesn't resolve from inside the server container, so fetch it server-side
+      // via the internal MinIO endpoint instead (same rewrite exporter.ts/fs.ts use).
+      const response = await axios({ url: toInternalMediaUrl(videoUrl), method: 'GET', responseType: 'stream' });
       await pipeline(response.data, fs.createWriteStream(tempFilePath));
 
       const authClient = this.createAuthClient({
@@ -169,7 +177,9 @@ export class YouTubeUploadService {
             description: description || 'Uploaded via RealityCuts'
           },
           status: {
-            privacyStatus: 'private' // reviewable before the user publishes it themselves
+            // Manual uploads always land private, reviewable before the user
+            // publishes them; automations opt into public via isPublic.
+            privacyStatus: isPublic ? 'public' : 'private'
           }
         },
         media: {
@@ -194,6 +204,64 @@ export class YouTubeUploadService {
       await fs.promises.rm(tempFilePath, { force: true }).catch(() => {});
     }
   }
+
+  /**
+   * Uploads a finished export to YouTube on behalf of an automation. Triggered by
+   * export-processor.ts once `job.youtubeUpload.channelId` is set (see
+   * automation-checker.service.ts, which is what actually opts an export into this).
+   * Bails silently if the job was never tagged for upload — this lets the same export
+   * pipeline serve both automation and manual (button-triggered) exports.
+   */
+  async uploadCompletedExport(exportJobId: string): Promise<void> {
+    const job = await ExportJob.findById(exportJobId);
+    if (!job?.youtubeUpload?.channelId) return;
+
+    const userId = job.userId;
+    const videoAiData = job.videoDataId ? await VideoAIData.findById(job.videoDataId) : null;
+    const videoTitle = job.youtubeUpload.title || videoAiData?.title || 'Untitled video';
+    const isPublic = job.youtubeUpload.isPublic ?? false;
+
+    const result = await this.uploadVideo(
+      userId,
+      {
+        videoUrl: job.videoUrl,
+        videoTitle,
+        description: job.youtubeUpload.description,
+        channelId: job.youtubeUpload.channelId
+      },
+      isPublic
+    );
+
+    if (!result.success) {
+      logger.error('Automated YouTube upload failed', { exportJobId, userId, error: result.error });
+      await notificationRepository.create({
+        userId,
+        type: 'YOUTUBE_UPLOAD_FAILED',
+        title: 'YouTube upload failed',
+        message: result.needsAuth
+          ? 'Your YouTube channel needs to be reconnected before automations can keep uploading to it.'
+          : 'Your automated video could not be uploaded to YouTube. It is still available to download.',
+        links: [{ linkType: 'EXPORT', docId: exportJobId }]
+      });
+      return;
+    }
+
+    job.youtubeUpload.uploadedUrl = result.youtubeUrl;
+    await job.save();
+
+    await notificationRepository.create({
+      userId,
+      type: 'YOUTUBE_UPLOAD_COMPLETE',
+      title: 'Uploaded to YouTube',
+      message: `"${videoTitle}" was uploaded to YouTube as ${isPublic ? 'public' : 'private'}: ${result.youtubeUrl}`,
+      links: [{ linkType: 'EXPORT', docId: exportJobId }]
+    });
+  }
 }
 
-export default new YouTubeUploadService();
+const youtubeUploadService = new YouTubeUploadService();
+export default youtubeUploadService;
+
+// Named export so BullMQ's lazy-import worker handlers (see bullmq/workers.ts) can
+// pull this in without needing default-export destructuring on a dynamic import.
+export const uploadCompletedExport = (exportJobId: string) => youtubeUploadService.uploadCompletedExport(exportJobId);

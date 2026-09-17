@@ -94,6 +94,13 @@ export interface IAutomationConfig extends Document {
     generateThumbnail?: boolean; // Generate thumbnail automatically (only for horizontal videos)
     sources?: IAutomationSource[];
   };
+  platforms?: {
+    youtube?: {
+      enabled?: boolean;
+      channelId?: string;
+      channelName?: string;
+    };
+  };
   lastProcessed?: Date;
   processedTimeSlots?: Map<string, Date>;
   status: 'ACTIVE' | 'PAUSED';

@@ -10,7 +10,9 @@ const notificationSchema = new mongoose.Schema<INotification>(
         'EXPORT_COMPLETE',
         'VIDEO_COMPLETE',
         'LIBRARY_POPULATED',
-        'AUTOMATION_FAILED'
+        'AUTOMATION_FAILED',
+        'YOUTUBE_UPLOAD_COMPLETE',
+        'YOUTUBE_UPLOAD_FAILED'
       ]
     },
     title: String,

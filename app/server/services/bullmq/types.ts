@@ -17,6 +17,7 @@ import type {
 	LibraryItemMediaGenerationEventData,
 	LibraryItemProcessingEventData,
 	VideoGenerationEventData,
+	YouTubeUploadEventData,
 } from "shared/types/event-contracts";
 
 export const QUEUE_NAMES = {
@@ -33,6 +34,7 @@ export const QUEUE_NAMES = {
 	CHAPTER_DETECTION: "chapter-detection",
 	CHAPTER_SCRIPT: "chapter-script",
 	AUTOMATION_CHECK: "automation-check",
+	YOUTUBE_UPLOAD: "youtube-upload",
 } as const;
 
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];
@@ -59,6 +61,7 @@ export interface JobPayloadMap {
 	"chapter-detection": ChapterDetectionEventData;
 	"chapter-script": ChapterScriptEventData;
 	"automation-check": Record<string, never>;
+	"youtube-upload": YouTubeUploadEventData;
 }
 
 // ---------------------------------------------------------------------------
@@ -81,6 +84,8 @@ export const QUEUE_CONCURRENCY: Record<QueueName, number> = {
 	"chapter-detection": 5,
 	"chapter-script": 5,
 	"automation-check": 1,
+	// Low concurrency: bounded by YouTube's own upload rate limits per channel.
+	"youtube-upload": 3,
 };
 
 // ---------------------------------------------------------------------------
