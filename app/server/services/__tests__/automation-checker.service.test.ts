@@ -91,19 +91,6 @@ describe('automation-checker.service', () => {
     expect(enqueueLambdaVideoGenerationTask).not.toHaveBeenCalled();
   });
 
-  it('disables the automation and notifies when no TTS minutes remain', async () => {
-    mockUserProfile.getTTSMinutesRemaining.mockReturnValue(0);
-    (automationConfigRepository.findDueAutomations as Mock).mockResolvedValue([{ config: baseConfig, dueTimeSlots }]);
-
-    await checkDueAutomations();
-
-    expect(notificationRepository.create).toHaveBeenCalledWith(
-      expect.objectContaining({ userId: 'user-1', type: 'AUTOMATION_FAILED' })
-    );
-    expect(automationConfigRepository.updateById).toHaveBeenCalledWith('config-1', { isEnabled: false });
-    expect(enqueueLambdaVideoGenerationTask).not.toHaveBeenCalled();
-  });
-
   it('uses a queued automation script instead of the theme when available', async () => {
     (automationScriptRepository.findNextAvailable as Mock).mockResolvedValue({
       _id: 'script-1',

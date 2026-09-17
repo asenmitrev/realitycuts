@@ -497,7 +497,6 @@ export class VideoService {
       throw new NotFoundError('Users without a profile cannot upload...');
     }
 
-    const ttsMinutesRemaining = await userProfileRepository.getTTSMinutesRemaining(userId);
     let duration: number;
 
     // Calculate duration based on upload type
@@ -517,24 +516,11 @@ export class VideoService {
       } else {
         duration = approximateMinutesFromText(script) * 60;
       }
-      if (ttsMinutesRemaining * 60 < duration) {
-        throw new BadRequestError('You have no TTS minutes remaining. Please upgrade to Plus to continue.');
-      }
     } else if (file && file.path) {
       const metadata = await tryCatchError(() => getMetadata(file.path), userId, tjId, 'Error reading file metadata.');
-      if (ttsMinutesRemaining * 60 < (metadata.format.duration ?? 0)) {
-        throw new BadRequestError('You have no TTS minutes remaining. Please upgrade to Plus to continue.');
-      }
       duration = metadata.format.duration ?? 0;
     } else {
       duration = approximateMinutesFromText(script) * 60;
-    }
-    if (ttsMinutesRemaining * 60 < duration || ttsMinutesRemaining < 0) {
-      throw new BadRequestError(
-        `This script is approximately ${approximateMinutesFromText(
-          script
-        )} minutes long. You have ${ttsMinutesRemaining} minutes remaining in your subscription.`
-      );
     }
     // Allow 5 minutes (300 seconds) for horizontal videos, 10 minutes (600 seconds) for vertical/default
     const maxDurationSeconds = orientation === 'horizontal' ? 600 : 600;

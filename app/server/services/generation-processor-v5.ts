@@ -3,13 +3,11 @@ import { TranscriptionJob } from '../models/transcription-job';
 import { logger } from './logging';
 import { VideoGenerationEventDataV4 } from 'shared/types/event-contracts';
 import { IVideoAIData, WordBaseEdited } from '../types';
-import userProfileRepository from '../repositories/user-profile.repository';
 import { sendData, sendError, sendMessage } from '../services/sockets';
 import { uploadToS3 } from './storage/s3';
 import transcriptionJobRepository from '../repositories/transcription-job.repository';
 import { safelyDelete } from './fs';
 import { mapFrancResultToDeepgramLanguage } from '../utils/mapping';
-import { approximateMinutesFromText } from 'shared/utils/misc';
 import { generateVoiceover } from './tts';
 import { getMetadata } from './video-manipulation/ffmpeg';
 import { tryCatchError } from '../utils/error-handling';
@@ -69,7 +67,6 @@ export const generationProcessorV5 = async (
       return;
     }
 
-    const ttsMinutesRemaining = await userProfileRepository.getTTSMinutesRemaining(userId);
     let history = '';
 
     if (historyKey) {
@@ -122,19 +119,6 @@ export const generationProcessorV5 = async (
     });
 
     sendMessage(userId, tjId, 'Script ready! Generating voiceover...', 82);
-
-    // Step 2: Check TTS limits
-    if (ttsMinutesRemaining < approximateMinutesFromText(processedScript)) {
-      await sendError(
-        userId,
-        tjId,
-        `This script is approximately ${approximateMinutesFromText(
-          processedScript
-        )} minutes long. You have ${ttsMinutesRemaining} minutes remaining in your subscription.`
-      );
-      transcriptionJobRepository.update(tjId, { status: 'FAILED' });
-      return;
-    }
 
     // Step 3: Generate TTS
     const { audioPath, audioName, transcript } = await generateVoiceover(

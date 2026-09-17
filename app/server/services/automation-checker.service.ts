@@ -72,19 +72,6 @@ async function processDueAutomation(automation: DueAutomation): Promise<void> {
     return;
   }
 
-  if (userProfile.getTTSMinutesRemaining() <= 0) {
-    logger.error('No TTS minutes remaining for user, disabling automation', { userId: automation.config.userId, configId });
-    await notificationRepository.create({
-      userId: automation.config.userId,
-      type: 'AUTOMATION_FAILED',
-      title: `Your profile has no TTS minutes remaining and ${automation.config.contentSettings?.theme || 'automation'} will be disabled`,
-      message: 'Your TTS minutes reset at the beginning of your next billing period.',
-      links: []
-    });
-    await automationConfigRepository.updateById(configId, { isEnabled: false });
-    return;
-  }
-
   for (const timeSlot of automation.dueTimeSlots) {
     try {
       const sent = await sendVideoGenerationEvent(automation.config, userProfile);
@@ -142,20 +129,6 @@ async function sendVideoGenerationEvent(
   }
 
   const historyKey = configId || 'automation';
-
-  if (userProfile.getTTSMinutesRemaining() <= 0) {
-    logger.error('No TTS minutes remaining for user, disabling automation', { userId: automation.userId, configId });
-    await notificationRepository.create({
-      userId: automation.userId,
-      type: 'AUTOMATION_FAILED',
-      title: 'Automation failed',
-      message:
-        'You have no TTS minutes remaining. Please upgrade to continue using the service. Your TTS minutes reset at the beginning of your next billing period.',
-      links: []
-    });
-    await automationConfigRepository.updateById(configId, { isEnabled: false });
-    return false;
-  }
 
   const queuedScript = await automationScriptRepository.findNextAvailable(configId);
 
