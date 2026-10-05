@@ -4,19 +4,11 @@ import { getContextForSentence } from './get-sentence-context';
 import { generateSearchTermForSentence } from './get-search-term-sentence';
 import { v4 as uuidv4 } from 'uuid';
 import { logger } from '../../../logging';
-import { overlayAnalysisAgent } from '../agents/overlay-analysis.agent';
-import { brollImagePromptAgent } from '../agents/broll-image-prompt.agent';
 import { searchLibrary } from './library-search';
 import { getSentences } from './get-sentences';
 import { getTheFinalSolution } from './get-final-solution';
 import { ThumbnailDuplicateDetector } from './thumbnail-duplicate-detector';
 import { totalContextAnalysisAgent } from '../agents/total-context-analysis.agent';
-import { runFluxPredictionUrl } from '../../../replicate.service';
-import { uploadToS3 } from '../../../storage/s3';
-import { getS3FileUrl } from '../../../../config/storage';
-import { downloadFile, safelyDelete } from '../../../fs';
-import fs from 'fs';
-const RE_SEARCH_THRESHOLD = 30;
 
 export const searchAndRank = async ({
   firstSearchPrompt,
@@ -237,73 +229,11 @@ export async function getFocusedSegments({
         isAllPublicLibrariesSelected,
         filterOnlyBroll: true
       });
-      let rankedAlternativesFinal = getTheFinalSolution(rankedAlternatives, desiredDuration);
+      const rankedAlternativesFinal = getTheFinalSolution(rankedAlternatives, desiredDuration);
 
       if (!rankedAlternativesFinal.length) {
         continue;
       }
-      const brollScore = await overlayAnalysisAgent({
-        script: formattedSentence,
-        brollThumbnailUrl: rankedAlternatives?.[0]?.thumbnailUrl,
-        context
-      });
-      const score = parseInt(brollScore) || 50;
-      if (isNaN(score)) {
-        // TODO: Log this error
-        throw new Error('Overlay analysis agent returned an invalid score');
-      } else {
-        if (score < RE_SEARCH_THRESHOLD) {
-          // Generate AI photo instead of re-searching
-          const imagePrompt = await brollImagePromptAgent.invoke({
-            script: formattedSentence,
-            context,
-            guidance
-          });
-
-          const fluxOutput = await runFluxPredictionUrl({
-            prompt: imagePrompt,
-            aspect_ratio: '16:9',
-            output_format: 'png'
-          });
-
-          const urlOrString = typeof fluxOutput?.url === 'function' ? fluxOutput.url() : (fluxOutput as any)?.url;
-          const imageUrlFromFlux = typeof urlOrString === 'string' ? urlOrString : (urlOrString as URL)?.toString?.() ?? '';
-          const tmpPath = `/tmp/${Date.now()}-ai-broll.png`;
-          await downloadFile(tmpPath, imageUrlFromFlux);
-          const s3Key = `users/${userId}/ai-broll-${Date.now()}.png`;
-          await uploadToS3(tmpPath, s3Key, {
-            mimeType: 'image/png',
-            originalName: s3Key,
-            fileSize: fs.statSync(tmpPath).size,
-            userId
-          });
-          safelyDelete(tmpPath);
-          const imageUrl = getS3FileUrl(s3Key);
-
-          const aiPhotoAlternative: Alternative = {
-            link: imageUrl,
-            preview: imageUrl,
-            thumbnailUrl: imageUrl,
-            title: imagePrompt,
-            duration: desiredDuration,
-            offsetStart: 0,
-            isVisible: true,
-            isFocused: true,
-            score: 100,
-            type: 'pinecone',
-            id: 0,
-            brollType: 'AI_PHOTO'
-          };
-
-          rankedAlternativesFinal = [
-            {
-              alternative: aiPhotoAlternative,
-              bounds: [0, desiredDuration]
-            }
-          ];
-        }
-      }
-
       let timeStart = startTime;
       const segments: Segment[] = [];
       for (const a of rankedAlternativesFinal) {
