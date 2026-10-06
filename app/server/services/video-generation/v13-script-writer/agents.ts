@@ -1,12 +1,20 @@
 import { getTavilyWebSearch } from './tools';
 import { createReactAgent } from '@langchain/langgraph/prebuilt';
-import { getLlm } from '../../../config/llm';
+import { getLlm, LlmOverrides } from '../../../config/llm';
 
-const prompt = `Your task is to analyze the input and create a script that:
+// Bounded so a single call can't hang a job for tens of minutes or be retried six times.
+export const SCRIPT_WRITER_LLM_OPTIONS: LlmOverrides = {
+  maxTokens: 2048,
+  timeout: 4 * 60 * 1000,
+  maxRetries: 1
+};
+
+export const scriptWriterPrompt = `Your task is to analyze the input and create a script that:
     1. Is engaging and follows best practices for short-form video content
-    2. Is truthful and factually accurate, if needed, source footage from the web
+    2. Is truthful and factually accurate
 
-When you have an idea for a script, check if there is sufficient footage in the video library to support it, then search the web to inform yourself about the topic and include real facts, and finally write the script.
+The topic has already been chosen to match the available video footage, so do not try to verify footage.
+You may use the web search tool AT MOST TWICE to look up real facts about the topic. After that (or right away, if you already know enough), write the script. Never search again once you have results — write the script.
 
     INSTRUCTIONS:
 
@@ -27,9 +35,9 @@ let _agent: ReturnType<typeof createReactAgent> | undefined;
 export const getScriptWriterAgent = () => {
   if (!_agent) {
     _agent = createReactAgent({
-      llm: getLlm(),
+      llm: getLlm(SCRIPT_WRITER_LLM_OPTIONS),
       tools: [getTavilyWebSearch()],
-      prompt
+      prompt: scriptWriterPrompt
     });
   }
   return _agent;

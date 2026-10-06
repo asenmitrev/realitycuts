@@ -23,7 +23,7 @@ export const ScriptWriterState = Annotation.Root({
     default: () => []
   }),
   history: Annotation<string>({
-    reducer: (x, y) => x.concat(y),
+    reducer: (x, y) => y ?? x,
     default: () => ''
   }),
   // Used to filter viral topics against automation history (avoid repeating topics across runs).
@@ -33,15 +33,20 @@ export const ScriptWriterState = Annotation.Root({
     default: () => ''
   }),
   libraryInfo: Annotation<string>({
-    reducer: (x, y) => x.concat(y),
+    reducer: (x, y) => y ?? x,
     default: () => ''
+  }),
+  // Number of times library footage has been (re)sampled; caps the resample loop.
+  librarySamples: Annotation<number>({
+    reducer: (x, y) => y ?? x,
+    default: () => 0
   }),
   topicRetries: Annotation<number>({
     reducer: (x, y) => y ?? x,
     default: () => 0
   }),
   searchResults: Annotation<string>({
-    reducer: (x, y) => x.concat(y),
+    reducer: (x, y) => y ?? x,
     default: () => ''
   }),
   longForm: Annotation<boolean>({

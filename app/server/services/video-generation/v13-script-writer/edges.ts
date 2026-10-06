@@ -2,30 +2,41 @@ import { AIMessage } from '@langchain/core/messages';
 import { ScriptWriterState } from './state';
 import { logger } from '../../../services/logging';
 
+// Library footage is sampled at most this many times before we accept the latest topic as-is.
+const MAX_LIBRARY_SAMPLES = 3;
+
 export function checkTopicPresenceInHistory(state: typeof ScriptWriterState.State): string {
-  logger.debug('---CHECK RELEVANCE---');
+  const { messages, topicRetries, topic, librarySamples } = state;
+  const lastMessage = messages[messages.length - 1] as AIMessage | undefined;
+  const binaryScore = lastMessage?.tool_calls?.[0]?.args?.binaryScore;
 
-  const { messages, topicRetries } = state;
-  const lastMessage = messages[messages.length - 1];
-  if (!('tool_calls' in lastMessage)) {
-    throw new Error("The 'checkTopicPresenceInHistory' node requires the most recent message to contain tool calls.");
-  }
-  const toolCalls = (lastMessage as AIMessage).tool_calls;
-  if (!toolCalls || !toolCalls.length) {
-    throw new Error('Last message was not a function message');
+  if (typeof binaryScore !== 'string') {
+    // The model skipped the tool call; don't crash the whole job over the history check.
+    logger.warn('[ScriptWriter] Topic history check returned no verdict -> treating topic as new', { topic });
+    return 'no';
   }
 
-  if (toolCalls[0].args.binaryScore === 'yes') {
-    logger.debug('---DECISION: TOPIC PRESENT IN HISTORY---');
-
+  if (binaryScore.trim().toLowerCase() === 'yes') {
     if (topicRetries > 5) {
-      logger.debug('---DECISION: TOPIC RETRIES EXCEEDED---');
+      if (librarySamples >= MAX_LIBRARY_SAMPLES) {
+        logger.warn('[ScriptWriter] Topic already used but resample budget exhausted -> using it anyway', {
+          topic,
+          topicRetries,
+          librarySamples
+        });
+        return 'no';
+      }
+      logger.info('[ScriptWriter] Topic already used and retries exhausted -> resampling library footage', {
+        topic,
+        topicRetries,
+        librarySamples
+      });
       return 'resample';
     }
+    logger.info('[ScriptWriter] Topic already used -> retrying with a new topic', { topic, topicRetries });
     return 'yes';
   }
-  logger.debug('---DECISION: TOPIC NOT PRESENT IN HISTORY---');
-  logger.debug('---TOPIC: ', state.topic);
+  logger.info('[ScriptWriter] Topic is new -> proceeding to script generation', { topic, topicRetries });
   return 'no';
 }
 

@@ -40,7 +40,7 @@ export const getTavilyWebSearch = (): any => {
   if (!_tavilyWebSearch) {
     _tavilyWebSearch = new TavilySearch({
       tavilyApiKey: TAVILY_API_KEY,
-      maxResults: 10
+      maxResults: 3
     });
   }
   return _tavilyWebSearch;

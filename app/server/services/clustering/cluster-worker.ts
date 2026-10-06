@@ -8,6 +8,9 @@
  * source text (`Function.prototype.toString()`), rather than as a separate
  * compiled entry point — that works identically under `tsx watch` (dev) and
  * under the single-file esbuild bundle (prod) with no extra build wiring.
+ * The prod bundle's minifier (keepNames) injects calls to a renamed `__name`
+ * helper into the lifted source; `buildClusterWorkerScript` detects and shims
+ * that helper in the worker preamble so the script stays self-contained.
  * Because of that, `runClusterCompute` must stay fully self-contained: no
  * imports from sibling project modules, only Node builtins and its own
  * nested helpers. It's still an ordinary exported function, so it can be
@@ -285,11 +288,62 @@ export function runClusterCompute(input: ClusterComputeInput): ClusterComputeOut
 	const chosen = best!;
 
 	// 4. Assign every point (not just the fit sample) to its nearest centroid.
+	// `chosen.assignments` is indexed by position in the shuffled `fitIndices`
+	// order, not by original row — map it back to row order so that
+	// `assignments[i]` refers to row `i` of the input matrix.
 	const allIndices = new Int32Array(n);
 	for (let i = 0; i < n; i++) allIndices[i] = i;
-	const allAssignments = fitIndices.length === n ? chosen.assignments : assign(allIndices, chosen.centroids);
+	let allAssignments: Int32Array;
+	if (fitIndices.length === n) {
+		allAssignments = new Int32Array(n);
+		for (let i = 0; i < n; i++) allAssignments[fitIndices[i]] = chosen.assignments[i];
+	} else {
+		allAssignments = assign(allIndices, chosen.centroids);
+	}
 
 	return { k: chosen.k, assignments: Array.from(allAssignments) };
+}
+
+/**
+ * Builds the source for the eval-mode worker thread that runs `fnSource`
+ * (the text of `runClusterCompute.toString()`).
+ *
+ * The prod bundle is minified with `keepNames` (see build.js): esbuild calls a
+ * `__name` helper from inside every function to preserve
+ * `Function.prototype.name`, and the minifier renames *that helper itself* to
+ * an arbitrary short identifier (e.g. `a`). Once we lift just this one
+ * function out via `toString()`, the helper it calls is no longer in scope,
+ * which surfaces at runtime as "a is not defined". Detect whichever
+ * identifier the lifted source actually uses for those calls —
+ * `x(y, "originalName")`, the only calls in this function with a
+ * string-literal second argument — and shim that exact name, in addition to
+ * `__name` for transpilers (e.g. tsx) that keep the helper's original name.
+ */
+export function buildClusterWorkerScript(fnSource: string): string {
+	const preambleIdentifiers = new Set(["__name", "parentPort", "workerData", "run"]);
+	const helperShims = [...new Set(
+		[...fnSource.matchAll(/\b([A-Za-z_$][\w$]*)\(\s*[A-Za-z_$][\w$]*\s*,\s*"[^"]*"\s*\)/g)].map(m => m[1]),
+	)]
+		.filter(name => !preambleIdentifiers.has(name))
+		// If the identifier is declared inside the function, it's a local that
+		// happens to be called with a string, not the out-of-scope helper.
+		.filter(name => !new RegExp(`\\bfunction\\s+${name}\\b|\\b(?:let|const|var)\\s+${name}\\b`).test(fnSource))
+		.map(name => `function ${name}(target, value) { __name(target, value); }`);
+
+	return `
+		const { parentPort, workerData } = require("node:worker_threads");
+		function __name(target, value) {
+			try { Object.defineProperty(target, "name", { value, configurable: true }); } catch {}
+			return target;
+		}
+		${helperShims.join("\n")}
+		const run = ${fnSource};
+		try {
+			parentPort.postMessage({ ok: true, result: run(workerData) });
+		} catch (error) {
+			parentPort.postMessage({ ok: false, error: error && error.message ? error.message : String(error) });
+		}
+	`;
 }
 
 type WorkerMessage =
@@ -323,24 +377,7 @@ export function runClusterComputeInWorker(
 	// `runClusterCompute` is embedded as source text so this works the same way
 	// whether the caller is running under `tsx watch` or the bundled prod build —
 	// see the module doc comment for why this can't be a separate worker file.
-	// Both esbuild and tsx's transpiler can inline a `__name(fn, "fn")` helper
-	// call into a function's body to preserve `Function.prototype.name`; that
-	// helper isn't in scope once we lift just this one function out via
-	// `toString()`, so it's shimmed here rather than depending on transpiler
-	// output shape.
-	const script = `
-		const { parentPort, workerData } = require("node:worker_threads");
-		function __name(target, value) {
-			try { Object.defineProperty(target, "name", { value, configurable: true }); } catch {}
-			return target;
-		}
-		const run = ${runClusterCompute.toString()};
-		try {
-			parentPort.postMessage({ ok: true, result: run(workerData) });
-		} catch (error) {
-			parentPort.postMessage({ ok: false, error: error && error.message ? error.message : String(error) });
-		}
-	`;
+	const script = buildClusterWorkerScript(runClusterCompute.toString());
 
 	return new Promise((resolve, reject) => {
 		const worker = new Worker(script, {

@@ -4,22 +4,31 @@ import { ScriptWriterState } from './state';
 import { ChatPromptTemplate } from '@langchain/core/prompts';
 import { ToolNode } from '@langchain/langgraph/prebuilt';
 import { getLlm } from '../../../config/llm';
-import { AIMessage, BaseMessage, HumanMessage } from '@langchain/core/messages';
+import { AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage } from '@langchain/core/messages';
+import { GraphRecursionError } from '@langchain/langgraph';
 import { getSampledLibraryInfo } from '../../../agents/library-aware-script.agent';
 import { annotationRemoverAgent } from '../../../agents/annotation-remover.agent';
-import { getScriptWriterAgent } from './agents';
+import { getScriptWriterAgent, SCRIPT_WRITER_LLM_OPTIONS, scriptWriterPrompt } from './agents';
+
+// One agent step + one tool step per search; 8 leaves room for two searches and the final answer.
+const SCRIPT_AGENT_RECURSION_LIMIT = 8;
 import { logger } from '../../../services/logging';
 export async function fetchLibraryFootage(
   state: typeof ScriptWriterState.State
 ): Promise<Partial<typeof ScriptWriterState.State>> {
-  logger.debug('Fetching library footage');
+  logger.info('[ScriptWriter] Fetching library footage', {
+    libraryIds: state.libraryIds,
+    sample: state.librarySamples + 1
+  });
 
   // Execute the tool
   const libraryInfo = await getSampledLibraryInfo(state.libraryIds);
 
+  logger.info('[ScriptWriter] Library footage sampled', { libraryInfoLength: libraryInfo.length });
+
   return {
-    messages: [{ name: 'assistant' as const, content: libraryInfo } as AIMessage],
     libraryInfo: libraryInfo,
+    librarySamples: state.librarySamples + 1,
     topicRetries: 0
   };
 }
@@ -37,7 +46,10 @@ export async function fetchViralTopicsNode(
 export async function topicNode(
   state: typeof ScriptWriterState.State
 ): Promise<Partial<typeof ScriptWriterState.State>> {
-  logger.debug('Generating new topic');
+  logger.info('[ScriptWriter] Generating topic', {
+    attempt: state.topicRetries + 1,
+    previousTopicsCount: state.previousTopics?.length ?? 0
+  });
 
   const { messages, previousTopics, viralVideoContext } = state;
   const userPrompt = state.userPrompt;
@@ -73,7 +85,7 @@ export async function topicNode(
 
   const prompt = ChatPromptTemplate.fromTemplate(promptTemplate);
 
-  const model = getLlm();
+  const model = getLlm(SCRIPT_WRITER_LLM_OPTIONS);
 
   const response = await prompt.pipe(model).invoke({
     userPrompt,
@@ -83,7 +95,7 @@ export async function topicNode(
   });
 
   const topicContent = response.content as string;
-  logger.debug('Topic:', topicContent);
+  logger.info('[ScriptWriter] Topic generated', { topic: topicContent });
 
   return {
     messages: [response],
@@ -96,7 +108,7 @@ export async function topicNode(
 export async function checkIfTopicIsInHistory(
   state: typeof ScriptWriterState.State
 ): Promise<Partial<typeof ScriptWriterState.State>> {
-  logger.debug('Checking if topic is in history');
+  logger.info('[ScriptWriter] Checking topic against history', { topic: state.topic });
   const { topic, history } = state;
 
   const prompt = ChatPromptTemplate.fromTemplate(
@@ -121,8 +133,10 @@ Give a binary score 'yes' or 'no' score to indicate whether the topic is already
     })
   };
 
-  const model = getLlm().bindTools([tool]);
+  const model = getLlm(SCRIPT_WRITER_LLM_OPTIONS).bindTools([tool]);
   const response = await prompt.pipe(model).invoke({ history, topic });
+  const binaryScore = response.tool_calls?.[0]?.args?.binaryScore;
+  logger.info('[ScriptWriter] Topic history check result', { topic, alreadyInHistory: binaryScore });
   return {
     messages: [response]
   };
@@ -156,9 +170,9 @@ export async function tavilyWebSearchNode(
 export async function generateScriptNode(
   state: typeof ScriptWriterState.State
 ): Promise<Partial<typeof ScriptWriterState.State>> {
-  logger.debug('Generating script');
   const { topic, userPrompt, longForm } = state;
   const wordCount = longForm ? '500' : '150-180';
+  logger.info('[ScriptWriter] Generating script', { topic, longForm, targetWordCount: wordCount });
   const inputMessages: BaseMessage[] = [
     new HumanMessage(`Here is the user provided prompt:
   \n ------- \n
@@ -175,27 +189,77 @@ export async function generateScriptNode(
   Formulate an improved script, without annotations or anything of the sort:`)
   ];
 
-  const { messages } = await getScriptWriterAgent().invoke({ messages: inputMessages }, { recursionLimit: 100 });
-
-  for (const message of messages) {
-    logger.debug('Script Writer Message ---\n\n', message.text);
-    logger.debug('--- Script Writer Message End ---\n\n');
+  // The agent used to loop on web search until it hit the context window. Stream it so that, if it
+  // still runs out of steps, we keep whatever research it gathered and write the script without tools.
+  let messages: BaseMessage[] = inputMessages;
+  try {
+    const stream = await getScriptWriterAgent().stream(
+      { messages: inputMessages },
+      { recursionLimit: SCRIPT_AGENT_RECURSION_LIMIT, streamMode: 'values' }
+    );
+    for await (const chunk of stream) {
+      messages = chunk.messages;
+    }
+  } catch (error) {
+    if (!(error instanceof GraphRecursionError)) {
+      throw error;
+    }
+    logger.warn('[ScriptWriter] Agent hit its step limit, writing script without tools', {
+      topic,
+      steps: messages.length
+    });
   }
 
-  logger.debug('Script:', messages[messages.length - 1].text);
+  messages.forEach((message: BaseMessage, index: number) => {
+    const toolCalls = 'tool_calls' in message ? (message as AIMessage).tool_calls : undefined;
+    if (toolCalls && toolCalls.length > 0) {
+      logger.info('[ScriptWriter] Agent tool call', {
+        step: index,
+        tools: toolCalls.map(call => ({ name: call.name, args: call.args }))
+      });
+    } else {
+      logger.info('[ScriptWriter] Agent step', { step: index, type: message._getType(), preview: message.text?.slice(0, 300) });
+    }
+  });
+
+  let finalMessage = messages[messages.length - 1];
+  const finishedCleanly =
+    finalMessage._getType() === 'ai' && !(finalMessage as AIMessage).tool_calls?.length && finalMessage.text.trim();
+  if (!finishedCleanly) {
+    finalMessage = await writeScriptWithoutTools(inputMessages, messages);
+  }
+
+  logger.info('[ScriptWriter] Script generated', { topic, script: finalMessage.text });
   return {
-    messages: [messages[messages.length - 1]]
+    messages: [finalMessage]
   };
+}
+
+async function writeScriptWithoutTools(inputMessages: BaseMessage[], agentMessages: BaseMessage[]): Promise<AIMessage> {
+  const research = agentMessages
+    .filter((message): message is ToolMessage => message._getType() === 'tool')
+    .map(message => message.text)
+    .join('\n\n');
+
+  const messages: BaseMessage[] = [new SystemMessage(scriptWriterPrompt), ...inputMessages];
+  if (research) {
+    messages.push(new HumanMessage(`Research notes from web search:\n${research}`));
+  }
+  messages.push(new HumanMessage('Write the script now. Reply with only the script.'));
+
+  return getLlm(SCRIPT_WRITER_LLM_OPTIONS).invoke(messages);
 }
 
 export async function annotationRemoverNode(
   state: typeof ScriptWriterState.State
 ): Promise<Partial<typeof ScriptWriterState.State>> {
-  logger.debug('Annotation Remover Node');
   const { messages } = state;
   const script = messages[messages.length - 1].text;
+  logger.info('[ScriptWriter] Removing annotations from script');
 
   const response = await annotationRemoverAgent.invoke({ input: script });
+
+  logger.info('[ScriptWriter] Final script ready', { script: response.text });
 
   return {
     messages: [response]

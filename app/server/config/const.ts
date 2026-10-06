@@ -8,6 +8,7 @@ export const LIBRARY_VIDEO_CHUNK_THRESHOLD = 2 * LIBRARY_PROCESSING_CHUNK_SIZE; 
 
 export const OPENAI_KEY = process.env.OPENAI_KEY;
 export const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
+export const ELEVENLABS_BASE_URL = process.env.ELEVENLABS_BASE_URL || undefined;
 export const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 export const GROK_KEY = process.env.GROK_KEY;
 export const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY;

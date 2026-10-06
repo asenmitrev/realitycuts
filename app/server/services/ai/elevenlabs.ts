@@ -3,10 +3,10 @@ import { Voice } from '@elevenlabs/elevenlabs-js/api/types';
 import { createWriteStream } from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 import { WordBaseEdited } from '../../types/index';
-import { ELEVENLABS_API_KEY } from '../../config/const';
+import { ELEVENLABS_API_KEY, ELEVENLABS_BASE_URL } from '../../config/const';
 
-const client = new ElevenLabsClient({ apiKey: ELEVENLABS_API_KEY });
-const musicClient = new Music({ apiKey: ELEVENLABS_API_KEY });
+const client = new ElevenLabsClient({ apiKey: ELEVENLABS_API_KEY, baseUrl: ELEVENLABS_BASE_URL });
+const musicClient = new Music({ apiKey: ELEVENLABS_API_KEY, baseUrl: ELEVENLABS_BASE_URL });
 export const getElevenLabsVoices = async (): Promise<Voice[]> => {
   const voices = await client.voices.getAll();
   return voices.voices;

@@ -325,7 +325,7 @@ export const generationProcessorV2 = async (
               scriptLength: processedScript.length
             });
           } catch (error) {
-            logger.warn('Library-aware script generation failed, falling back to standard generation', {
+            logger.warn('Library-aware script generation failed', {
               userId,
               tjId,
               error: error
