@@ -18,14 +18,14 @@ export function getVoices(premiumVoices: ElevenLabsVoice[] | undefined): UIVoice
 
   const mappedPremiumVoices: UIVoice[] =
     premiumVoices
-      ?.map(voice => ({
+      ?.filter((voice): voice is ElevenLabsVoice & { name: string } => voice.name !== undefined)
+      .map(voice => ({
         name: voice.name,
         id: voice.voiceId,
-        tags: voice.labels ? [voice.labels.use_case] : [],
+        tags: voice.labels?.use_case ? [voice.labels.use_case] : [],
         premium: true,
         preview: voice.previewUrl
-      }))
-      .filter((v): v is UIVoice => v.name !== undefined && v.preview !== undefined) ?? [];
+      })) ?? [];
 
   return [...freeVoices, ...mappedPremiumVoices];
 }

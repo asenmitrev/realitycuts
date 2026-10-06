@@ -35,7 +35,7 @@ import { AutomationPdfSourceSection } from './AutomationPdfSourceSection';
 interface Voice {
   id: string;
   name: string;
-  preview: string;
+  preview?: string;
   premium: boolean;
   tags: string[];
 }
@@ -142,20 +142,22 @@ export const ContentSettings: FC<ContentSettingsProps> = ({ voices }) => {
                         <Text textTransform="capitalize" color={textColor}>
                           {selectedVoice ? selectedVoice.name : 'Select a voice'}
                         </Text>
-                        <IconButton
-                          aria-label={selectedVoice ? `Play ${selectedVoice.name} sample` : 'Play sample'}
-                          icon={currentlyPlayingAudio === field.value ? <FaPause /> : <FaPlay />}
-                          variant="ghost"
-                          colorScheme="blue"
-                          size="sm"
-                          isDisabled={!selectedVoice}
-                          onClick={e => {
-                            e.stopPropagation();
-                            setCurrentlyPlayingAudio(v => (v === field.value ? null : field.value || null));
-                          }}
-                        />
+                        {(!selectedVoice || selectedVoice.preview) && (
+                          <IconButton
+                            aria-label={selectedVoice ? `Play ${selectedVoice.name} sample` : 'Play sample'}
+                            icon={currentlyPlayingAudio === field.value ? <FaPause /> : <FaPlay />}
+                            variant="ghost"
+                            colorScheme="blue"
+                            size="sm"
+                            isDisabled={!selectedVoice}
+                            onClick={e => {
+                              e.stopPropagation();
+                              setCurrentlyPlayingAudio(v => (v === field.value ? null : field.value || null));
+                            }}
+                          />
+                        )}
                       </HStack>
-                      {selectedVoice && (
+                      {selectedVoice?.preview && (
                         <audio src={selectedVoice.preview} style={{ display: 'none' }} ref={audioRef} />
                       )}
                     </Box>

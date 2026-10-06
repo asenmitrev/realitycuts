@@ -7,7 +7,7 @@ export type UIVoice = {
   name: string;
   id: string;
   tags: string[];
-  preview: string;
+  preview?: string;
   premium: boolean;
 };
 export const AudioChoice: FC<{ voice: UIVoice; isSelected: boolean; isPlaying: boolean; onPlay: () => void }> = memo(
@@ -58,22 +58,24 @@ export const AudioChoice: FC<{ voice: UIVoice; isSelected: boolean; isPlaying: b
                 {voice.name}{' '}
               </Text>
             </HStack>
-            <IconButton
-              aria-label={`Play ${voice} voice sample`}
-              icon={isPlaying ? <FaPause /> : <FaPlay />}
-              variant="ghost"
-              colorScheme="blue"
-              size="sm"
-              onClick={e => {
-                e.preventDefault();
-                onPlay();
-              }}
-              _hover={{
-                bg: 'whiteAlpha.200'
-              }}
-            />
+            {voice.preview && (
+              <IconButton
+                aria-label={`Play ${voice} voice sample`}
+                icon={isPlaying ? <FaPause /> : <FaPlay />}
+                variant="ghost"
+                colorScheme="blue"
+                size="sm"
+                onClick={e => {
+                  e.preventDefault();
+                  onPlay();
+                }}
+                _hover={{
+                  bg: 'whiteAlpha.200'
+                }}
+              />
+            )}
           </HStack>
-          <audio src={voice.preview} style={{ display: 'none' }} ref={ref} />
+          {voice.preview && <audio src={voice.preview} style={{ display: 'none' }} ref={ref} />}
         </Radio>
         {voice.tags.length > 0 && (
           <HStack gap={2} wrap="wrap" px={4} pb={4}>

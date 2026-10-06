@@ -86,24 +86,26 @@ const VoiceOption: FC<{
             ))}
           </HStack>
         </VStack>
-        <IconButton
-          aria-label={`Play ${voice.name} voice sample`}
-          icon={isPlaying ? <FaPause /> : <FaPlay />}
-          variant="ghost"
-          colorScheme="blue"
-          size="sm"
-          onClick={e => {
-            e.preventDefault();
-            e.stopPropagation();
-            onPlay();
-          }}
-          _hover={{
-            bg: 'whiteAlpha.200'
-          }}
-        />
+        {voice.preview && (
+          <IconButton
+            aria-label={`Play ${voice.name} voice sample`}
+            icon={isPlaying ? <FaPause /> : <FaPlay />}
+            variant="ghost"
+            colorScheme="blue"
+            size="sm"
+            onClick={e => {
+              e.preventDefault();
+              e.stopPropagation();
+              onPlay();
+            }}
+            _hover={{
+              bg: 'whiteAlpha.200'
+            }}
+          />
+        )}
       </HStack>
       {/* biome-ignore lint/a11y/useMediaCaption: voice samples don't ship with captions */}
-      <audio src={voice.preview} style={{ display: 'none' }} ref={ref} />
+      {voice.preview && <audio src={voice.preview} style={{ display: 'none' }} ref={ref} />}
     </Box>
   );
 };
