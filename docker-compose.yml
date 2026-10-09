@@ -51,20 +51,21 @@ services:
     # be bolted on as a second container without converting mongo:7 to a
     # replica set with keyfile auth for a separate mongot to attach to.
     #
-    # These stay on regular Docker-managed volumes (not ./data bind mounts): the
+    # The data defaults to Docker-managed volumes, not ./data bind mounts: the
     # replica set's internal auth keyfile under /data/configdb requires real Unix
     # permission bits (0600), which a non-POSIX host filesystem (NTFS/exFAT/network
     # shares) cannot enforce even via chmod, so mongod fails to start with "Unable to
-    # acquire security key[s]" if this directory is bind-mounted onto one. Mongo only
-    # holds metadata + vector embeddings here (not the actual video files), so its
-    # footprint is small — the multi-gigabyte data (MinIO, server /tmp) is what
-    # actually needed to move off the OS disk, and those have no such requirement.
+    # acquire security key[s]" if this directory is bind-mounted onto one.
+    # MONGO_DB_DIR / MONGO_CONFIGDB_DIR / MONGO_SEARCH_DIR (e.g. in .env) override each
+    # volume with a host path. Point them at a POSIX filesystem on an SSD: vector
+    # searches read the mongot index at random, and on a spinning disk a single query
+    # can exceed the server's 45 s socket timeout.
     image: mongodb/mongodb-atlas-local:7.0.34
     hostname: mongo
     volumes:
-      - videoai-mongo:/data/db
-      - videoai-mongo-configdb:/data/configdb
-      - videoai-mongo-search:/data/mongot
+      - ${MONGO_DB_DIR:-videoai-mongo}:/data/db
+      - ${MONGO_CONFIGDB_DIR:-videoai-mongo-configdb}:/data/configdb
+      - ${MONGO_SEARCH_DIR:-videoai-mongo-search}:/data/mongot
     environment:
       MONGODB_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:-admin}
       MONGODB_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-adminpassword}
@@ -120,9 +121,9 @@ services:
       - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
       - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
       - MINIO_BUCKET=1703-media-app-2
-      - MEDIA_BASE_URL=http://localhost:9000
-      - CLIENT_URL=http://localhost:3020
-      - API_URL=http://localhost:3021
+      - MEDIA_BASE_URL=${MEDIA_BASE_URL:-http://localhost:9000}
+      - CLIENT_URL=${CLIENT_URL:-http://localhost:3020}
+      - API_URL=${API_URL:-http://localhost:3021}
     depends_on:
       redis:
         condition: service_healthy
@@ -149,8 +150,8 @@ services:
 # under Docker's own storage root (typically /var/lib/docker, usually on the
 # OS/home disk). ./data is gitignored.
 #
-# Mongo's volumes below stay Docker-managed on purpose — see the comment on the mongo
-# service.
+# Mongo's volumes below are the defaults when MONGO_*_DIR is unset — see the comment on
+# the mongo service.
 volumes:
   videoai-mongo:
   videoai-mongo-configdb:

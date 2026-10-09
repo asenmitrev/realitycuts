@@ -3,7 +3,7 @@ import { searchPexelsVideos } from '../../../pexels';
 import { searchVideoEmbeddingsV2 } from '../../../vector-search.service';
 
 import { SHOT_TYPE } from '../const';
-const PINECONE_SEARCH_LIMIT = 10;
+export const PINECONE_SEARCH_LIMIT = 10;
 
 export const searchLibrary = async ({
   firstSearchPrompt,
@@ -18,7 +18,8 @@ export const searchLibrary = async ({
   useVideoEmbeddings,
   isAllPublicLibrariesSelected = false,
   includeVectorInOutput = false,
-  filterOnlyBroll = false
+  filterOnlyBroll = false,
+  vectorSearchLimit = PINECONE_SEARCH_LIMIT
 }: {
   firstSearchPrompt: string;
   secondSearchPrompt: string;
@@ -33,6 +34,7 @@ export const searchLibrary = async ({
   isAllPublicLibrariesSelected?: boolean;
   includeVectorInOutput?: boolean;
   filterOnlyBroll?: boolean;
+  vectorSearchLimit?: number;
 }) => {
   // const pineconeSearch = useVideoEmbeddings ? searchVideoEmbeddings : searchPinecone;
   // Search: Get the stock footage suggestions for the sentence
@@ -42,7 +44,7 @@ export const searchLibrary = async ({
     selectedTags?.length || privateLibraryIds?.length || isAllPublicLibrariesSelected
       ? searchVideoEmbeddingsV2(
           `${vectorSearchPrompt}`,
-          PINECONE_SEARCH_LIMIT,
+          vectorSearchLimit,
           privateLibraryIds,
           existingPineconeIds,
           undefined,

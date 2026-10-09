@@ -4,91 +4,41 @@ import { getContextForSentence } from './get-sentence-context';
 import { generateSearchTermForSentence } from './get-search-term-sentence';
 import { v4 as uuidv4 } from 'uuid';
 import { logger } from '../../../logging';
-import { searchLibrary } from './library-search';
+import { PINECONE_SEARCH_LIMIT, searchLibrary } from './library-search';
 import { getSentences } from './get-sentences';
 import { getTheFinalSolution } from './get-final-solution';
 import { ThumbnailDuplicateDetector } from './thumbnail-duplicate-detector';
-import { totalContextAnalysisAgent } from '../agents/total-context-analysis.agent';
+import { createLimiter } from '../../../../utils/concurrency';
 
-export const searchAndRank = async ({
-  firstSearchPrompt,
-  secondSearchPrompt,
-  vectorSearchPrompt,
-  formattedSentence,
-  context,
-  userId,
-  selectedTags = [],
-  privateLibraryIds,
-  existingPineconeIds,
-  libraries,
-  useVideoEmbeddings = true,
-  enableDuplicateDetection = true,
-  previouslyUsedAlternatives = [],
-  isAllPublicLibrariesSelected = false,
-  includeVectorInOutput = false,
-  filterOnlyBroll = false
-}: {
-  firstSearchPrompt: string;
-  secondSearchPrompt: string;
-  vectorSearchPrompt: string;
-  formattedSentence: string;
-  context: string;
-  userId: string;
-  selectedTags?: string[];
-  privateLibraryIds: string[];
-  existingPineconeIds: string[];
-  libraries: { pexels: boolean };
-  useVideoEmbeddings?: boolean;
-  enableDuplicateDetection?: boolean;
-  previouslyUsedAlternatives?: Alternative[];
-  isAllPublicLibrariesSelected?: boolean;
-  includeVectorInOutput?: boolean;
-  filterOnlyBroll?: boolean;
-}) => {
-  const [[alternatives, keywords], pexelsResults, pineconeResults] = await searchLibrary({
-    firstSearchPrompt,
-    secondSearchPrompt,
-    vectorSearchPrompt,
-    userId,
-    selectedTags: selectedTags ?? [],
-    privateLibraryIds: privateLibraryIds ?? [],
-    existingPineconeIds,
-    libraries,
-    useVideoEmbeddings,
-    isAllPublicLibrariesSelected,
-    includeVectorInOutput,
-    filterOnlyBroll
-  });
+// Search terms are generated in order within a chain, so each prompt sees the chain's earlier terms
+// (the prompt asks not to repeat footage within a paragraph). Chains end at paragraph ends or after
+// this many sentences, and different chains run concurrently.
+const MAX_SENTENCES_PER_TERM_CHAIN = 8;
+const SEARCH_TERM_CONCURRENCY = 6;
+const RETRIEVAL_CONCURRENCY = 6;
+// searchVideoEmbeddingsV2 returns up to `limit * 2` rows when filterOnlyBroll is set.
+const VECTOR_ROWS_PER_SENTENCE = PINECONE_SEARCH_LIMIT * 2;
+// Candidates are fetched before earlier sentences have picked their clips, so over-fetch to keep
+// VECTOR_ROWS_PER_SENTENCE rows after the used-clip filter applied during placement.
+const PREFETCH_VECTOR_LIMIT = PINECONE_SEARCH_LIMIT * 3;
+const PREFETCH_VECTOR_ROWS = PREFETCH_VECTOR_LIMIT * 2;
 
-  const allResults = [...pineconeResults, ...alternatives, ...pexelsResults];
+type SearchPrompts = { firstSearchPrompt: string; secondSearchPrompt: string; vectorSearchPrompt: string };
+type PreparedSentence = {
+  prompts: SearchPrompts;
+  keywords: string;
+  vectorRows: Alternative[];
+  pexelsResults: Alternative[];
+} | null;
 
-  let finalUniqueAlternatives = allResults;
-
-  // Detect and filter out duplicate thumbnails if enabled
-  if (enableDuplicateDetection && allResults.length > 1) {
-    const { uniqueAlternatives } = await ThumbnailDuplicateDetector.detectDuplicates(
-      previouslyUsedAlternatives,
-      allResults
-    );
-    finalUniqueAlternatives = uniqueAlternatives;
-  }
-
-  // Use the filtered alternatives for ranking
-  // const photosToRank = [
-  //   finalUniqueAlternatives.find(r => pineconeResults.some(p => p.dbId === r.dbId))?.thumbnailUrl,
-  //   finalUniqueAlternatives.find(r => alternatives.some(a => a.dbId === r.dbId))?.thumbnailUrl,
-  //   finalUniqueAlternatives.find(r => pexelsResults.some(p => p.dbId === r.dbId))?.thumbnailUrl
-  // ].filter((url): url is string => Boolean(url));
-
-  return finalUniqueAlternatives;
-
-  // const rankedIndex = await overlayRankingAgent(formattedSentence, context, photosToRank);
-  // const rankedPhotoIndex = finalUniqueAlternatives.findIndex(r => r.thumbnailUrl === photosToRank[rankedIndex]);
-  // let rankedAlternatives = [...finalUniqueAlternatives.splice(rankedPhotoIndex, 1), ...finalUniqueAlternatives];
-
-  // return rankedAlternatives;
-};
-
+/**
+ * Picks b-roll for every sentence of the transcript.
+ *
+ * Network work (search-term LLM calls, vector/Pexels searches, thumbnail hashing) runs concurrently
+ * per sentence. Placement then walks the sentences in order: it carries uncovered time into the next
+ * sentence and never reuses a clip, exactly as a fully sequential pass would. When the prefetched
+ * candidates run short after removing used clips, that sentence is re-queried excluding them.
+ */
 export async function getFocusedSegments({
   userId,
   eventId,
@@ -139,105 +89,159 @@ export async function getFocusedSegments({
 
   const results: Segment[] = [];
   const transcriptEnd = transcript[transcript.length - 1]?.end ?? 0;
-  const existingPineconeIds: string[] = [];
-  const sentenceAccumulator: string[] = [];
   const incrementTime = Math.max(brollDuration, 0.5);
-  const globalContext = await totalContextAnalysisAgent.invoke({
-    transcript: transcript.map(w => w.punctuated_word ?? w.word).join(' ')
-  });
-  // Track previously used alternatives to prevent duplicates across segments
+  // Clips already placed; later sentences must not reuse them (by id, or by thumbnail hash).
+  const usedClipIds = new Set<string>();
   const previouslyUsedAlternatives: Alternative[] = [];
 
   const sentenceList = sentences ?? (await getSentences(transcript));
-  let startTime = 0;
-
-  for (const sentence of sentenceList) {
-    const nextSentence = sentenceList[sentenceList.indexOf(sentence) + 1];
-    const desiredEndTime =
-      nextSentence?.[0]?.start !== undefined ? nextSentence[0].start : totalDuration ?? transcriptEnd;
-    const desiredDuration = desiredEndTime - startTime;
+  // A sentence's slot runs until the next sentence starts (or the end of the video).
+  const desiredEndTimeOf = (index: number) => sentenceList[index + 1]?.[0]?.start ?? totalDuration ?? transcriptEnd;
+  const isOutsideTimeRanges = sentenceList.map(sentence => {
     const sentenceStart = sentence[0]?.start ?? 0;
     const sentenceEnd = sentence[sentence.length - 1]?.end ?? 0;
-
-    if (excludedTimeRanges?.length) {
-      const isExcluded = excludedTimeRanges.some(
-        range => sentenceStart >= range.start && sentenceEnd <= range.end
-      );
-      if (isExcluded) {
-        startTime = desiredEndTime;
-        continue;
-      }
-    }
-
-    if (includedTimeRanges?.length) {
-      const isIncluded = includedTimeRanges.some(
+    const isExcluded =
+      excludedTimeRanges?.some(range => sentenceStart >= range.start && sentenceEnd <= range.end) ?? false;
+    const isIncluded =
+      !includedTimeRanges?.length ||
+      includedTimeRanges.some(
         range =>
           (sentenceStart >= range.start && sentenceStart < range.end) ||
           (sentenceEnd > range.start && sentenceEnd <= range.end) ||
           (sentenceStart <= range.start && sentenceEnd >= range.end)
       );
-      if (!isIncluded) {
-        startTime = desiredEndTime;
-        continue;
-      }
-    }
+    return isExcluded || !isIncluded;
+  });
+  const librarySearchOptions = {
+    userId,
+    selectedTags: selectedTags ?? [],
+    privateLibraryIds: privateLibraryIds ?? [],
+    useVideoEmbeddings,
+    isAllPublicLibrariesSelected,
+    filterOnlyBroll: true
+  };
 
+  // Phase 1: search terms + candidate retrieval, concurrently.
+  const searchTermLimit = createLimiter(SEARCH_TERM_CONCURRENCY);
+  const retrievalLimit = createLimiter(RETRIEVAL_CONCURRENCY);
+  const prepared: Promise<PreparedSentence>[] = [];
+  let chainSearchTerms: string[] = [];
+  let chainLength = 0;
+  let previousInChain: Promise<unknown> = Promise.resolve();
+
+  for (let index = 0; index < sentenceList.length; index++) {
+    const sentence = sentenceList[index];
+    if (isOutsideTimeRanges[index] || sentence.length === 0) {
+      continue;
+    }
+    const previousSearchTerms = chainSearchTerms;
+    // Matches the sequential pass whenever the previous sentence filled its slot.
+    const nominalStart = index === 0 ? 0 : sentence[0].start;
+    const context = getContextForSentence(transcript, nominalStart, desiredEndTimeOf(index));
+
+    const termsPromise = previousInChain
+      .then(() =>
+        searchTermLimit(() =>
+          generateSearchTermForSentence(sentence, [...previousSearchTerms], context, nominalStart, isTalkingHead, guidance)
+        )
+      )
+      .then(terms => {
+        if (terms === null) {
+          return null;
+        }
+        const keywords = `${terms.first_search_prompt},${terms.second_search_prompt},${terms.vector_search_prompt}`;
+        previousSearchTerms.push(keywords);
+        const prompts: SearchPrompts = {
+          firstSearchPrompt: terms.first_search_prompt,
+          secondSearchPrompt: terms.second_search_prompt,
+          vectorSearchPrompt: terms.vector_search_prompt
+        };
+        return { prompts, keywords };
+      });
+
+    const preparedPromise: Promise<PreparedSentence> = termsPromise.then(terms =>
+      terms === null
+        ? null
+        : retrievalLimit(async () => {
+            const [, pexelsResults, vectorRows] = await searchLibrary({
+              ...librarySearchOptions,
+              ...terms.prompts,
+              existingPineconeIds: [],
+              libraries,
+              vectorSearchLimit: PREFETCH_VECTOR_LIMIT
+            });
+            if (enableDuplicateDetection) {
+              await ThumbnailDuplicateDetector.ensureHashes([...vectorRows, ...pexelsResults]);
+            }
+            return { ...terms, vectorRows, pexelsResults };
+          })
+    );
+    // Failures surface when phase 2 awaits this promise. The no-op handler only stops Node from
+    // flagging the rejection as unhandled while earlier sentences are still being placed.
+    preparedPromise.catch(() => undefined);
+    prepared[index] = preparedPromise;
+
+    previousInChain = termsPromise;
+    chainLength++;
+    if (chainLength === MAX_SENTENCES_PER_TERM_CHAIN || sentence.some(w => w.isParagraphEnd)) {
+      chainSearchTerms = [];
+      chainLength = 0;
+      previousInChain = Promise.resolve();
+    }
+  }
+
+  // Phase 2: place clips in transcript order.
+  let startTime = 0;
+  for (let index = 0; index < sentenceList.length; index++) {
+    const sentence = sentenceList[index];
+    const desiredEndTime = desiredEndTimeOf(index);
+    const desiredDuration = desiredEndTime - startTime;
+
+    if (isOutsideTimeRanges[index]) {
+      startTime = desiredEndTime;
+      continue;
+    }
     if (desiredDuration < 2) {
       logger.debug('SEGMENT TOO SHORT');
     }
-    const sentenceToProcess = sentence.filter((w: WordBaseEdited) => w.start && w.start >= startTime);
-    const formattedSentence = sentenceToProcess
-      .map((w: WordBaseEdited) => w.punctuated_word ?? w.word)
-      .join(' ');
-    const context = getContextForSentence(transcript, startTime, desiredEndTime);
-
     if (sentence.length === 0) {
       startTime += incrementTime;
       continue;
     }
-    // Search Term Generation: Get the search terms for the sentence
-    const segment = await generateSearchTermForSentence(
-      sentence,
-      sentenceAccumulator,
-      context,
-      startTime,
-      isTalkingHead,
-      globalContext,
-      guidance
-    );
-    if (segment !== null) {
-      let firstSearchTerm = segment.first_search_prompt;
-      let secondSearchTerm = segment.second_search_prompt;
-      let vectorSearchTerm = segment.vector_search_prompt;
-      logger.debug('formatted sentence ' + formattedSentence);
-      logger.debug('context ' + context);
-      // Overlay Analysis: Get the broll for the sentence
-      let rankedAlternatives = await searchAndRank({
-        firstSearchPrompt: firstSearchTerm,
-        secondSearchPrompt: secondSearchTerm,
-        vectorSearchPrompt: vectorSearchTerm,
-        formattedSentence,
-        context,
-        userId,
-        selectedTags: selectedTags ?? [],
-        privateLibraryIds: privateLibraryIds ?? [],
-        existingPineconeIds,
-        libraries,
-        useVideoEmbeddings,
-        enableDuplicateDetection,
-        previouslyUsedAlternatives,
-        isAllPublicLibrariesSelected,
-        filterOnlyBroll: true
-      });
+
+    const preparedSentence = await prepared[index];
+    if (preparedSentence !== null) {
+      const { prompts, keywords, pexelsResults } = preparedSentence;
+      let vectorCandidates = preparedSentence.vectorRows.filter(row => !row.dbId || !usedClipIds.has(row.dbId));
+      const vectorIndexExhausted = preparedSentence.vectorRows.length < PREFETCH_VECTOR_ROWS;
+      if (vectorCandidates.length >= VECTOR_ROWS_PER_SENTENCE || vectorIndexExhausted) {
+        vectorCandidates = vectorCandidates.slice(0, VECTOR_ROWS_PER_SENTENCE);
+      } else {
+        logger.debug('Prefetched b-roll exhausted by used clips, re-querying', { sentenceIndex: index });
+        [, , vectorCandidates] = await searchLibrary({
+          ...librarySearchOptions,
+          ...prompts,
+          existingPineconeIds: [...usedClipIds],
+          libraries: { pexels: false }
+        });
+        if (enableDuplicateDetection) {
+          await ThumbnailDuplicateDetector.ensureHashes(vectorCandidates);
+        }
+      }
+
+      const allResults = [...vectorCandidates, ...pexelsResults];
+      const rankedAlternatives =
+        enableDuplicateDetection && allResults.length > 1
+          ? ThumbnailDuplicateDetector.filterUnique(previouslyUsedAlternatives, allResults)
+          : allResults;
       const rankedAlternativesFinal = getTheFinalSolution(rankedAlternatives, desiredDuration);
 
       if (!rankedAlternativesFinal.length) {
         continue;
       }
       let timeStart = startTime;
-      const segments: Segment[] = [];
       for (const a of rankedAlternativesFinal) {
-        segments.push({
+        results.push({
           segmentId: uuidv4(),
           timeStart: Math.max(timeStart, 0),
           timeEnd: timeStart + (a.bounds[2] ?? a.bounds[1]),
@@ -247,25 +251,17 @@ export async function getFocusedSegments({
               .filter(r => (r.dbId && r.dbId !== a.alternative.dbId) || (r.id && r.id !== a.alternative.id))
               .slice(1)
           ],
-          keywords: `${firstSearchTerm},${secondSearchTerm},${vectorSearchTerm}`
+          keywords
         });
 
-        // Add the focused (first) alternative to the previously used list
-        if (a.alternative) {
-          previouslyUsedAlternatives.push(a.alternative);
+        previouslyUsedAlternatives.push(a.alternative);
+        if (a.alternative.dbId !== undefined) {
+          usedClipIds.add(a.alternative.dbId);
         }
 
         timeStart += a.bounds[2] ?? a.bounds[1];
       }
-
-      results.push(...segments);
-      const dbIds = rankedAlternativesFinal.map(a => a.alternative.dbId).filter(a => a !== undefined);
-      if (dbIds.length > 0) {
-        existingPineconeIds.push(...dbIds);
-      }
       startTime = results[results.length - 1].timeEnd;
-
-      sentenceAccumulator.push(`${firstSearchTerm},${secondSearchTerm},${vectorSearchTerm}`);
     } else {
       startTime += incrementTime;
     }

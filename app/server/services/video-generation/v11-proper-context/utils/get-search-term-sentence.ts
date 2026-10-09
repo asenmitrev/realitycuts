@@ -8,7 +8,6 @@ export const generateSearchTermForSentence = async (
   context: string,
   timeStart: number,
   _isTalkingHead: boolean,
-  _globalContext: string,
   guidance: string
 ) => {
   const start = timeStart < 0.3 ? 0 : timeStart;
